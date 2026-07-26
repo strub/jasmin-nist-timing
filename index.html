@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EasyCrypt checking time</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --page: #f9f9f7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --muted: #898781;
+    --hairline: #e1e0d9; --ring: rgba(11,11,11,.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d;
+      --text-primary: #fff; --text-secondary: #c3c2b7; --muted: #898781;
+      --hairline: #2c2c2a; --ring: rgba(255,255,255,.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page: #0d0d0d;
+    --text-primary: #fff; --text-secondary: #c3c2b7; --muted: #898781;
+    --hairline: #2c2c2a; --ring: rgba(255,255,255,.10);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--page); color: var(--text-primary);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px; display: flex; flex-direction: column; align-items: center;
+  }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--ring);
+    border-radius: 10px; padding: 20px 24px; max-width: 980px; width: 100%;
+  }
+  h1 { font-size: 17px; font-weight: 600; }
+  .sub { color: var(--text-secondary); font-size: 12.5px; margin-top: 2px; }
+  .layout { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;
+            justify-content: center; margin-top: 12px; }
+  #chart { flex: 1 1 560px; max-width: 660px; }
+  svg { width: 100%; height: auto; display: block; }
+  .legend { flex: 0 0 230px; display: flex; flex-direction: column; gap: 6px;
+            font-size: 13px; margin-top: 8px; }
+  .legend .row { display: flex; align-items: center; gap: 8px; cursor: pointer;
+                 padding: 3px 6px; border-radius: 6px; }
+  .legend .row:hover { background: color-mix(in srgb, var(--text-primary) 6%, transparent); }
+  .legend .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend .nm { flex: 1; color: var(--text-primary); overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; }
+  .legend .tm { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  #tip {
+    position: fixed; pointer-events: none; display: none; z-index: 10;
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--ring); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    padding: 7px 10px; font-size: 12.5px; max-width: 380px;
+  }
+  #tip .p { color: var(--text-secondary); word-break: break-all; }
+  #tip .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+  path.arc { cursor: pointer; }
+  path.arc:hover { filter: brightness(1.08); }
+  text.albl { pointer-events: none; fill: #fff; font-size: 11px;
+              dominant-baseline: central; }
+  text.center-t { fill: var(--text-primary); font-weight: 600; }
+  text.center-s { fill: var(--text-secondary); font-size: 12px; }
+  details { margin-top: 16px; border-top: 1px solid var(--hairline); padding-top: 10px; }
+  summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
+  table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--hairline); }
+  th { color: var(--muted); font-weight: 500; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  th.n { text-align: right; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>EasyCrypt checking time by file</h1>
+  <div class="sub" id="subtitle"></div>
+  <div class="layout">
+    <div id="chart"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="hint">Cumulative per-file checking time (a parallel run's wall
+    time is lower). Click a directory to zoom in, the center to zoom out.</div>
+  <details><summary>All files as a table</summary>
+    <table id="tbl"><thead><tr>
+      <th>file</th><th class="n">seconds</th><th class="n">% of total</th>
+    </tr></thead><tbody></tbody></table>
+  </details>
+</div>
+<div id="tip"></div>
+<script>
+const DATA = {"meta": {"repo": "strub/jasmin-nist", "branch": "main", "commit": "99c853da", "run_id": 30148110527, "date": "2026-07-25T06:47:05Z", "files": 251, "total_seconds": 9237.4}, "tree": {"name": "proofs", "children": [{"name": "core", "children": [{"name": "eclib", "children": [{"name": "CircuitBindings.ec", "seconds": 7.3}, {"name": "CircuitBindingsExtra.ec", "seconds": 4.2}, {"name": "CoreUtils.ec", "seconds": 0.1}, {"name": "DistrExtra.ec", "seconds": 21.4}, {"name": "EclibExtra.ec", "seconds": 5.3}, {"name": "JArrayExtra.ec", "seconds": 1.2}, {"name": "JWordExtra.ec", "seconds": 18.8}, {"name": "JWordList.ec", "seconds": 17.7}, {"name": "JWord_extra.ec", "seconds": 14.5}, {"name": "ListExtra.ec", "seconds": 0.5}, {"name": "List_extra.ec", "seconds": 1.3}, {"name": "W16extra.ec", "seconds": 2.6}, {"name": "W8extra.ec", "seconds": 1.9}, {"name": "xof.ec", "seconds": 0.3}]}, {"name": "stdlib", "children": [{"name": "algebra", "children": [{"name": "MaxBigop.eca", "seconds": 0.5}, {"name": "PolyReduceZpCentered.ec", "seconds": 6.2}, {"name": "TypeWithBot.eca", "seconds": 0.1}, {"name": "ZModPCentered.ec", "seconds": 4.2}]}, {"name": "datatypes", "children": [{"name": "Nneg.ec", "seconds": 0.6}]}]}, {"name": "xarrays", "children": [{"name": "XArray1024.ec", "seconds": 5.4}, {"name": "XArray1088.ec", "seconds": 4.2}, {"name": "XArray1152.ec", "seconds": 3.4}, {"name": "XArray128.ec", "seconds": 6.0}, {"name": "XArray1408.ec", "seconds": 2.9}, {"name": "XArray1410.ec", "seconds": 4.7}, {"name": "XArray1536.ec", "seconds": 3.5}, {"name": "XArray1568.ec", "seconds": 4.2}, {"name": "XArray16.ec", "seconds": 5.1}, {"name": "XArray160.ec", "seconds": 5.9}, {"name": "XArray2048.ec", "seconds": 4.1}, {"name": "XArray24.ec", "seconds": 4.2}, {"name": "XArray25.ec", "seconds": 3.5}, {"name": "XArray256.ec", "seconds": 7.6}, {"name": "XArray32.ec", "seconds": 5.5}, {"name": "XArray320.ec", "seconds": 4.8}, {"name": "XArray384.ec", "seconds": 4.7}, {"name": "XArray4.ec", "seconds": 4.8}, {"name": "XArray40.ec", "seconds": 3.5}, {"name": "XArray416.ec", "seconds": 5.0}, {"name": "XArray48.ec", "seconds": 5.0}, {"name": "XArray5.ec", "seconds": 3.4}, {"name": "XArray5120.ec", "seconds": 2.9}, {"name": "XArray56.ec", "seconds": 4.0}, {"name": "XArray6.ec", "seconds": 3.3}, {"name": "XArray640.ec", "seconds": 4.7}, {"name": "XArray7.ec", "seconds": 3.4}, {"name": "XArray768.ec", "seconds": 5.4}, {"name": "XArray7680.ec", "seconds": 3.4}, {"name": "XArray8.ec", "seconds": 4.4}, {"name": "XArray960.ec", "seconds": 4.9}]}, {"name": "xwords", "children": [{"name": "XWord10.ec", "seconds": 3.2}, {"name": "XWord11.ec", "seconds": 3.6}, {"name": "XWord12.ec", "seconds": 3.6}, {"name": "XWord128.ec", "seconds": 3.4}, {"name": "XWord13.ec", "seconds": 3.4}, {"name": "XWord20.ec", "seconds": 3.5}, {"name": "XWord256.ec", "seconds": 3.4}, {"name": "XWord4.ec", "seconds": 3.5}, {"name": "XWord5.ec", "seconds": 3.5}, {"name": "XWord512.ec", "seconds": 4.8}, {"name": "XWord64.ec", "seconds": 3.4}]}]}, {"name": "fips202", "children": [{"name": "avx2", "children": [{"name": "Avx2_extra.ec", "seconds": 4.4}, {"name": "Keccak1600_avx2.ec", "seconds": 9.2}, {"name": "Keccak1600_avx2x4.ec", "seconds": 6.2}, {"name": "Keccak1600_fixedsizes_avx2.ec", "seconds": 253.3}, {"name": "Keccak1600_fixedsizes_avx2x4.ec", "seconds": 9.2}, {"name": "Keccak1600_updstate_avx2.ec", "seconds": 81.6}, {"name": "Keccak1600_updstate_avx2x4.ec", "seconds": 5.4}, {"name": "Keccakf1600_avx2.ec", "seconds": 18.9}, {"name": "Keccakf1600_avx2x4.ec", "seconds": 11.0}, {"name": "Keccakf1600_avx2x4_generic.ec", "seconds": 15.8}, {"name": "Keccakf1600_avx2x4_native.ec", "seconds": 26.6}, {"name": "Keccakf1600_avx2x4_orig.ec", "seconds": 16.4}, {"name": "kck_abs_bindings.ec", "seconds": 201.9}, {"name": "kck_bindings.ec", "seconds": 55.2}]}, {"name": "common", "children": [{"name": "Keccak1600_subreadwrite.ec", "seconds": 96.6}, {"name": "keccak_bindings.ec", "seconds": 18.6}]}, {"name": "extracted", "children": [{"name": "Keccak1600_Jazz.ec", "seconds": 2.2}, {"name": "Keccak1600_Jazz_ASIZE.ec", "seconds": 2.3}, {"name": "Keccak1600_fixedsizes_avx2_checkXtr.ec", "seconds": 8.9}, {"name": "Keccak1600_fixedsizes_avx2x4_checkXtr.ec", "seconds": 9.2}, {"name": "Keccak1600_fixedsizes_ref_checkXtr.ec", "seconds": 5.7}, {"name": "Keccak1600_subreadwrite_checkXtr.ec", "seconds": 3.7}, {"name": "Keccak1600_updstate_avx2_checkXtr.ec", "seconds": 5.8}, {"name": "Keccak1600_updstate_avx2x4_checkXtr.ec", "seconds": 7.7}]}, {"name": "ref", "children": [{"name": "Keccak1600_fixedsizes_ref.ec", "seconds": 5.7}, {"name": "Keccak1600_ref.ec", "seconds": 3.8}, {"name": "Keccakf1600.ec", "seconds": 2.9}, {"name": "Keccakf1600_basic.ec", "seconds": 16.0}, {"name": "Keccakf1600_opt.ec", "seconds": 10.1}, {"name": "Keccakf1600_ref.ec", "seconds": 10.1}]}, {"name": "spec", "children": [{"name": "FIPS202_Keccakf1600.ec", "seconds": 1.4}, {"name": "FIPS202_SHA3.ec", "seconds": 1.4}, {"name": "Keccak1600_arrays.ec", "seconds": 1.2}, {"name": "properties", "children": [{"name": "FIPS202_SHA3_Spec.ec", "seconds": 36.0}, {"name": "Keccak1600_Spec.ec", "seconds": 24.2}, {"name": "Keccakf1600_Spec.ec", "seconds": 34.1}]}]}]}, {"name": "mldsa", "children": [{"name": "eclib", "children": [{"name": "ArrayExtra.ec", "seconds": 1.1}, {"name": "CircuitBindings.ec", "seconds": 6.4}, {"name": "CoreUtils.ec", "seconds": 0.1}, {"name": "JArrayExtra.ec", "seconds": 1.1}, {"name": "JWordExtra.ec", "seconds": 32.9}, {"name": "ListExtra.ec", "seconds": 0.5}, {"name": "bindings.ec", "seconds": 3.3}, {"name": "xof.ec", "seconds": 0.3}]}, {"name": "spec", "children": [{"name": "Conversion.ec", "seconds": 4.2}, {"name": "GFq.ec", "seconds": 2.1}, {"name": "MLDSA.ec", "seconds": 4.4}, {"name": "MLDSA_SP.ec", "seconds": 3.8}, {"name": "MLDSA_W32_Rep.ec", "seconds": 6.9}, {"name": "Parameters.ec", "seconds": 2.0}, {"name": "Rq.ec", "seconds": 2.7}, {"name": "Sampling.ec", "seconds": 3.6}, {"name": "Serialization.ec", "seconds": 14.6}, {"name": "Symmetric.ec", "seconds": 3.5}, {"name": "VecMat.ec", "seconds": 5.9}, {"name": "properties", "children": [{"name": "ZqRounding.eca", "seconds": 210.7}]}]}, {"name": "x86-64", "children": [{"name": "avx2", "children": [{"name": "common", "children": [{"name": "avx2red.ec", "seconds": 21.9}, {"name": "ntt", "children": [{"name": "crspoly.ec", "seconds": 2.0}, {"name": "fnttalg.ec", "seconds": 20.7}, {"name": "fnttalgcorrect.ec", "seconds": 6.8}, {"name": "fnttcorrect.ec", "seconds": 28.2}, {"name": "inttalg.ec", "seconds": 31.1}, {"name": "inttalgcorrect.ec", "seconds": 7.0}, {"name": "inttcorrect.ec", "seconds": 24.6}, {"name": "listred.ec", "seconds": 0.9}, {"name": "nttalg.ec", "seconds": 15.2}, {"name": "nttlogspec.ec", "seconds": 0.7}, {"name": "nttpoly.ec", "seconds": 22.9}, {"name": "nttspec.ec", "seconds": 15.7}, {"name": "nttzetas.ec", "seconds": 9.0}, {"name": "pwmulcorrect.ec", "seconds": 10.1}, {"name": "pwmultest.ec", "seconds": 7.7}]}, {"name": "sample", "children": [{"name": "agree.ec", "seconds": 2.1}, {"name": "errshuffle.ec", "seconds": 7.4}, {"name": "prefixarray.ec", "seconds": 1.8}, {"name": "rejstream.ec", "seconds": 2.6}, {"name": "sha3x4.ec", "seconds": 7.5}, {"name": "warraypack.ec", "seconds": 1.8}]}]}, {"name": "ml_dsa_65", "children": [{"name": "arithmetic", "children": [{"name": "rounding.ec", "seconds": 6.1}]}, {"name": "column_vector.ec", "seconds": 38.0}, {"name": "common", "children": [{"name": "arithmetic", "children": [{"name": "common_invert_ntt.ec", "seconds": 6.1}, {"name": "common_modular.ec", "seconds": 6.3}, {"name": "common_ntt.ec", "seconds": 5.8}, {"name": "common_rounding.ec", "seconds": 6.2}]}, {"name": "encoding", "children": [{"name": "s1.ec", "seconds": 25.9}, {"name": "s2.ec", "seconds": 26.2}, {"name": "signature.ec", "seconds": 95.7}, {"name": "t0.ec", "seconds": 36.3}, {"name": "t1.ec", "seconds": 25.2}]}]}, {"name": "coresamplers", "children": [{"name": "Aexpand.ec", "seconds": 47.0}, {"name": "Mexpand.ec", "seconds": 26.3}, {"name": "Sexpand.ec", "seconds": 50.0}]}, {"name": "encoding", "children": [{"name": "commitment.ec", "seconds": 20.3}, {"name": "error_polynomial.ec", "seconds": 30.8}, {"name": "gamma1.ec", "seconds": 38.3}]}, {"name": "hashing.ec", "seconds": 52.2}, {"name": "hashing_4x.ec", "seconds": 27.6}, {"name": "keygen.ec", "seconds": 61.0}, {"name": "ml_dsa_65_avx2.ec", "seconds": 3.5}, {"name": "mldsa_65_prelude.ec", "seconds": 37.2}, {"name": "polynomial.ec", "seconds": 104.3}, {"name": "row_vector.ec", "seconds": 32.5}, {"name": "sample", "children": [{"name": "challenge.ec", "seconds": 6.1}, {"name": "error_vectors.ec", "seconds": 6.1}, {"name": "mask.ec", "seconds": 6.1}, {"name": "matrix_A.ec", "seconds": 6.0}]}, {"name": "sign.ec", "seconds": 103.7}, {"name": "sign_norm_checks.ec", "seconds": 77.3}, {"name": "verify.ec", "seconds": 52.0}]}]}]}]}, {"name": "mlkem", "children": [{"name": "eclib", "children": [{"name": "AVX2_Ops.ec", "seconds": 17.5}, {"name": "Fastexp.ec", "seconds": 1.3}, {"name": "For.ec", "seconds": 1.1}, {"name": "IntDiv_extra.ec", "seconds": 2.6}, {"name": "Jcheck.ec", "seconds": 0.8}, {"name": "MLKEMFCLib.ec", "seconds": 38.7}, {"name": "Montgomery.ec", "seconds": 12.4}, {"name": "Montgomery16.ec", "seconds": 15.6}, {"name": "NTTAlgebra.ec", "seconds": 262.1}, {"name": "NTT_Fq.ec", "seconds": 46.4}, {"name": "barrett_mlkem_general.ec", "seconds": 2.3}, {"name": "mlkem_bindings.ec", "seconds": 3.4}, {"name": "mlkem_filters.ec", "seconds": 282.0}]}, {"name": "security", "children": [{"name": "FLPRG.eca", "seconds": 0.1}, {"name": "FO_MLKEM.ec", "seconds": 12.1}, {"name": "FO_TT.ec", "seconds": 41.4}, {"name": "FO_UU.ec", "seconds": 34.0}, {"name": "KEM_ROM.ec", "seconds": 1.0}, {"name": "MLWE.ec", "seconds": 8.1}, {"name": "MLWE_PKE.ec", "seconds": 11.0}, {"name": "MLWE_PKE_Basic.ec", "seconds": 4.2}, {"name": "MLWE_PKE_Hash.ec", "seconds": 17.9}, {"name": "PKE_ROM.ec", "seconds": 2.5}]}, {"name": "spec", "children": [{"name": "GFq.ec", "seconds": 0.8}, {"name": "KPKE.ec", "seconds": 3.0}, {"name": "MLKEM.ec", "seconds": 3.1}, {"name": "Parameters.ec", "seconds": 0.7}, {"name": "Rq.ec", "seconds": 3.2}, {"name": "Sampling.ec", "seconds": 3.0}, {"name": "Serialization.ec", "seconds": 3.2}, {"name": "Symmetric.ec", "seconds": 3.0}, {"name": "VecMat.ec", "seconds": 4.4}, {"name": "properties", "children": [{"name": "Correctness.ec", "seconds": 81.7}, {"name": "EncDecCorrectness.ec", "seconds": 110.6}, {"name": "InnerPKE_Op.ec", "seconds": 20.8}, {"name": "MLKEMLib.ec", "seconds": 6.1}, {"name": "MLKEMSecurity.ec", "seconds": 63.1}]}]}]}, {"name": "mlkem-correctness", "children": [{"name": "avx2", "children": [{"name": "1024", "children": [{"name": "MLKEM1024_prelude.ec", "seconds": 0.4}, {"name": "MLKEM_InnerPKE_avx2_new.ec", "seconds": 316.7}, {"name": "MLKEM_KEM_avx2.ec", "seconds": 71.8}, {"name": "MLKEM_PolyVec_avx2.ec", "seconds": 24.6}, {"name": "MLKEM_PolyVec_avx2_circuit.ec", "seconds": 165.5}, {"name": "MLKEM_Poly_avx2_circuit_1024.ec", "seconds": 30.1}, {"name": "MLKEM_W16_Rep.ec", "seconds": 5.2}, {"name": "MLKEM_avx2_equivs.ec", "seconds": 0.1}, {"name": "MLKEM_genmatrix_avx2.ec", "seconds": 155.4}, {"name": "MLKEM_getnoise_avx2.ec", "seconds": 59.0}, {"name": "MLKEM_keccak_avx2.ec", "seconds": 93.5}, {"name": "NTT_avx2.ec", "seconds": 129.4}, {"name": "circuit_sem_1024.ec", "seconds": 42.5}, {"name": "common", "children": [{"name": "Fq.ec", "seconds": 10.3}, {"name": "Fq_avx2.ec", "seconds": 277.1}, {"name": "MLKEM_Poly_avx2.ec", "seconds": 29.6}, {"name": "MLKEM_Poly_avx2_circuit.ec", "seconds": 51.3}, {"name": "NTT_AVX_Fq.ec", "seconds": 249.4}, {"name": "NTT_AVX_j.ec", "seconds": 503.3}, {"name": "NTT_avx2_poly.ec", "seconds": 147.6}, {"name": "circuit_semantics.ec", "seconds": 43.7}]}, {"name": "mlkem_filters_bridge.ec", "seconds": 182.6}]}, {"name": "768", "children": [{"name": "MLKEM768_prelude.ec", "seconds": 0.4}, {"name": "MLKEM_InnerPKE_avx2_new.ec", "seconds": 304.0}, {"name": "MLKEM_KEM_avx2.ec", "seconds": 71.8}, {"name": "MLKEM_PolyVec_avx2.ec", "seconds": 16.7}, {"name": "MLKEM_PolyVec_avx2_circuit.ec", "seconds": 166.6}, {"name": "MLKEM_Poly_avx2_circuit_768.ec", "seconds": 28.5}, {"name": "MLKEM_W16_Rep.ec", "seconds": 5.1}, {"name": "MLKEM_avx2_equivs.ec", "seconds": 0.1}, {"name": "MLKEM_genmatrix_avx2.ec", "seconds": 147.5}, {"name": "MLKEM_getnoise_avx2.ec", "seconds": 58.3}, {"name": "MLKEM_keccak_avx2.ec", "seconds": 96.4}, {"name": "NTT_avx2.ec", "seconds": 97.9}, {"name": "circuit_sem_768.ec", "seconds": 74.3}, {"name": "common", "children": [{"name": "Fq.ec", "seconds": 10.2}, {"name": "Fq_avx2.ec", "seconds": 283.1}, {"name": "MLKEM_Poly_avx2.ec", "seconds": 29.1}, {"name": "MLKEM_Poly_avx2_circuit.ec", "seconds": 51.4}, {"name": "NTT_AVX_Fq.ec", "seconds": 263.4}, {"name": "NTT_AVX_j.ec", "seconds": 536.2}, {"name": "NTT_avx2_poly.ec", "seconds": 151.8}, {"name": "circuit_semantics.ec", "seconds": 43.3}]}, {"name": "mlkem_filters_bridge.ec", "seconds": 154.6}]}]}]}]}};
+
+/* ---- palette: categorical slot per top-level directory (validated) ---- */
+const LIGHT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4",
+               "#008300", "#4a3aa7", "#e34948"];
+const DARK  = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181",
+               "#008300", "#9085e9", "#e66767"];
+const isDark = () => {
+  const t = document.documentElement.dataset.theme;
+  if (t) return t === "dark";
+  return matchMedia("(prefers-color-scheme: dark)").matches;
+};
+
+/* ---- hierarchy ---- */
+function annotate(node, depth, path) {
+  node.depth = depth;
+  node.path = path;
+  if (node.children) {
+    node.seconds = 0;
+    for (const c of node.children)
+      node.seconds += annotate(c, depth + 1, path ? path + "/" + c.name : c.name).seconds;
+  }
+  return node;
+}
+const root = annotate(DATA.tree, 0, "");
+const families = root.children.map(c => c.name);
+const famColor = name => {
+  const pal = isDark() ? DARK : LIGHT;
+  return pal[families.indexOf(name) % pal.length];
+};
+
+/* shade a hex toward the surface by t in [0,1] (depth fade) */
+function shade(hex, t) {
+  const s = isDark() ? [26, 26, 25] : [252, 252, 251];
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  return "#" + c.map((v, i) =>
+    Math.round(v + (s[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+
+/* ---- layout ---- */
+const W = 660, CX = W / 2, R0 = 52, RING = 46;
+let zoomRoot = root;
+let maxDepth = 0;
+(function md(n) { maxDepth = Math.max(maxDepth, n.depth); (n.children || []).forEach(md); })(root);
+
+function fmt(s) {
+  if (s >= 3600) return (s / 3600).toFixed(1) + " h";
+  if (s >= 60) return (s / 60).toFixed(1) + " min";
+  return s.toFixed(1) + " s";
+}
+
+function arcPath(a0, a1, r0, r1) {
+  const p = (a, r) => [CX + r * Math.sin(a), CX - r * Math.cos(a)];
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const [x0, y0] = p(a0, r0), [x1, y1] = p(a1, r0),
+        [x2, y2] = p(a1, r1), [x3, y3] = p(a0, r1);
+  return `M${x0},${y0}A${r0},${r0} 0 ${large} 1 ${x1},${y1}` +
+         `L${x2},${y2}A${r1},${r1} 0 ${large} 0 ${x3},${y3}Z`;
+}
+
+const svgNS = "http://www.w3.org/2000/svg";
+const el = (t, at) => {
+  const e = document.createElementNS(svgNS, t);
+  for (const k in at) e.setAttribute(k, at[k]);
+  return e;
+};
+
+function render() {
+  const chart = document.getElementById("chart");
+  chart.innerHTML = "";
+  const H = W;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+                          "aria-label": "sunburst of checking time" });
+
+  let labelId = 0;
+  const labels = [];
+  const tip = document.getElementById("tip");
+  const total = root.seconds, zTotal = zoomRoot.seconds;
+
+  function famOf(n) {
+    let p = n.path.split("/")[0];
+    return p || n.name;
+  }
+
+  function draw(node, a0, a1, ring) {
+    if (node !== zoomRoot) {
+      const r0 = R0 + ring * RING, r1 = r0 + RING - 2;
+      const base = famColor(famOf(node));
+      const t = Math.min(0.62, 0.16 * (node.depth - 1));
+      const fill = node.children ? shade(base, t) : shade(base, Math.min(0.7, t + 0.10));
+      const path = el("path", {
+        d: arcPath(a0, a1, r0, r1), fill, class: "arc",
+        stroke: "var(--surface-1)", "stroke-width": "1.5",
+      });
+      path.addEventListener("mousemove", ev => {
+        tip.style.display = "block";
+        tip.style.left = Math.min(innerWidth - 380, ev.clientX + 14) + "px";
+        tip.style.top = (ev.clientY + 14) + "px";
+        tip.innerHTML =
+          `<div class="p">${node.path}${node.children ? "/" : ""}</div>` +
+          `<div><span class="v">${fmt(node.seconds)}</span>` +
+          ` — ${(100 * node.seconds / total).toFixed(1)}% of total` +
+          (zoomRoot !== root ? `, ${(100 * node.seconds / zTotal).toFixed(1)}% of ${zoomRoot.name}` : "") +
+          `</div>`;
+      });
+      path.addEventListener("mouseleave", () => tip.style.display = "none");
+      path.addEventListener("click", () => {
+        if (node.children) { zoomRoot = node; render(); }
+      });
+      svg.appendChild(path);
+
+      /* direct label following the arc's curve, one consistent (clockwise)
+         reading direction for every label */
+      const span = a1 - a0, rm = (r0 + r1) / 2, arcLen = span * rm;
+      if (node.children && arcLen > 34) {
+        const p = (a, r) => [CX + r * Math.sin(a), CX - r * Math.cos(a)];
+        const large = span > Math.PI ? 1 : 0;
+        const [xs, ys] = p(a0, rm);
+        const [xe, ye] = p(a1, rm);
+        const id = "lbl" + (labelId++);
+        const guide = el("path", {
+          id, fill: "none",
+          d: `M${xs},${ys}A${rm},${rm} 0 ${large} 1 ${xe},${ye}`,
+        });
+        svg.appendChild(guide);
+        const txt = el("text", { class: "albl" });
+        const tp = el("textPath", { href: "#" + id, startOffset: "50%",
+                                    "text-anchor": "middle" });
+        tp.textContent = node.name;
+        txt.appendChild(tp);
+        svg.appendChild(txt);
+        labels.push({ txt, tp, name: node.name, room: arcLen - 8 });
+      }
+    }
+    if (node.children) {
+      let a = a0;
+      for (const c of node.children) {
+        const sw = (a1 - a0) * (c.seconds / node.seconds || 0);
+        draw(c, a, a + sw, node === zoomRoot ? 0 : ring + 1);
+        a += sw;
+      }
+    }
+  }
+  draw(zoomRoot, 0, 2 * Math.PI, -1);
+
+  /* center: current root + zoom out */
+  const c = el("circle", { cx: CX, cy: CX, r: R0 - 4, fill: "var(--page)",
+                           stroke: "var(--hairline)" });
+  c.style.cursor = zoomRoot === root ? "default" : "pointer";
+  c.addEventListener("click", () => {
+    if (zoomRoot !== root) {
+      let up = root;
+      const parts = zoomRoot.path.split("/"); parts.pop();
+      for (const p of parts) up = up.children.find(k => k.name === p) || up;
+      zoomRoot = zoomRoot.path.includes("/") ? up : root;
+      render();
+    }
+  });
+  svg.appendChild(c);
+  const t1 = el("text", { x: CX, y: CX - 6, class: "center-t", "text-anchor": "middle" });
+  t1.textContent = zoomRoot.name;
+  const t2 = el("text", { x: CX, y: CX + 12, class: "center-s", "text-anchor": "middle" });
+  t2.textContent = fmt(zoomRoot.seconds);
+  svg.appendChild(t1); svg.appendChild(t2);
+
+  chart.appendChild(svg);
+
+  /* fit pass: measure each label on its arc; trim to fit, drop if hopeless */
+  for (const { txt, tp, name, room } of labels) {
+    if (txt.getComputedTextLength() <= room) continue;
+    let n = name.length;
+    while (n > 2) {
+      n--;
+      tp.textContent = name.slice(0, n) + "…";
+      if (txt.getComputedTextLength() <= room) break;
+    }
+    if (n <= 2) txt.remove();
+  }
+
+  /* legend */
+  const lg = document.getElementById("legend");
+  lg.innerHTML = "";
+  for (const f of root.children) {
+    const row = document.createElement("div"); row.className = "row";
+    row.innerHTML =
+      `<span class="sw" style="background:${famColor(f.name)}"></span>` +
+      `<span class="nm">${f.name}</span>` +
+      `<span class="tm">${fmt(f.seconds)} · ${(100 * f.seconds / total).toFixed(0)}%</span>`;
+    row.addEventListener("click", () => { zoomRoot = f; render(); });
+    lg.appendChild(row);
+  }
+}
+
+/* subtitle from meta */
+(function () {
+  const m = DATA.meta || {};
+  const bits = [];
+  if (m.commit) bits.push(`commit ${m.commit}`);
+  if (m.branch) bits.push(m.branch);
+  if (m.date) bits.push(m.date.slice(0, 10));
+  const n = (function cnt(x) {
+    return x.children ? x.children.reduce((a, c) => a + cnt(c), 0) : 1; })(root);
+  document.getElementById("subtitle").textContent =
+    `${n} files · ${fmt(root.seconds)} cumulative` +
+    (bits.length ? ` · ${bits.join(" · ")}` : "");
+})();
+
+/* table view (accessibility relief for low-contrast slots) */
+(function () {
+  const rows = [];
+  (function walk(n) {
+    if (n.children) n.children.forEach(walk);
+    else rows.push(n);
+  })(root);
+  rows.sort((a, b) => b.seconds - a.seconds);
+  const tb = document.querySelector("#tbl tbody");
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.path}</td><td class="n">${r.seconds.toFixed(1)}</td>` +
+                   `<td class="n">${(100 * r.seconds / root.seconds).toFixed(2)}</td>`;
+    tb.appendChild(tr);
+  }
+})();
+
+render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement,
+  { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+</body>
+</html>
