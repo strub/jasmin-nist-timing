@@ -357,9 +357,10 @@ function render() {
   usage.className = "usage";
   usage.textContent =
     "Click a slice or a legend entry to zoom in; zoom out with the " +
-    "breadcrumb, or click the central disc to go up one level. The URL " +
-    "anchor follows the zoom, so links open pre-zoomed. Times are " +
-    "cumulative per file (a parallel run's wall time is lower).";
+    "breadcrumb, or click the central disc to go up one level. Zooming " +
+    "updates the page URL, so copying it links directly to the current " +
+    "view. Times are cumulative per file (a parallel run's wall time is " +
+    "lower).";
   lg.appendChild(usage);
 }
 
