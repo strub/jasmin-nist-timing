@@ -204,6 +204,7 @@ function render() {
   let labelId = 0;
   const labels = [];
   const tip = document.getElementById("tip");
+  tip.style.display = "none";   /* re-render pulls the arc from under the mouse */
   const total = root.seconds, zTotal = zoomRoot.seconds;
 
   function famOf(n) {
