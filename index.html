@@ -147,6 +147,27 @@ function inkFor(hex) {
 /* ---- layout ---- */
 const W = 660, CX = W / 2, R0 = 52, RING = 46;
 let zoomRoot = root;
+
+/* zooming goes through the URL hash: #<path> deep-links a sub-category,
+   and back/forward navigate the zoom history */
+function zoomTo(node) {
+  const target = node === root ? "" : node.path;
+  if (decodeURIComponent(location.hash.replace(/^#/, "")) === target) return;
+  location.hash = target;   /* fires hashchange, which renders */
+}
+function applyHash() {
+  const h = decodeURIComponent(location.hash.replace(/^#/, ""));
+  let node = root;
+  if (h)
+    for (const seg of h.split("/")) {
+      const next = (node.children || []).find(k => k.name === seg);
+      if (!next) { node = root; break; }
+      node = next;
+    }
+  zoomRoot = node.children ? node : root;
+  render();
+}
+window.addEventListener("hashchange", applyHash);
 let maxDepth = 0;
 (function md(n) { maxDepth = Math.max(maxDepth, n.depth); (n.children || []).forEach(md); })(root);
 
@@ -213,7 +234,7 @@ function render() {
       });
       path.addEventListener("mouseleave", () => tip.style.display = "none");
       path.addEventListener("click", () => {
-        if (node.children) { zoomRoot = node; render(); }
+        if (node.children) zoomTo(node);
       });
       svg.appendChild(path);
 
@@ -261,8 +282,7 @@ function render() {
       let up = root;
       const parts = zoomRoot.path.split("/"); parts.pop();
       for (const p of parts) up = up.children.find(k => k.name === p) || up;
-      zoomRoot = zoomRoot.path.includes("/") ? up : root;
-      render();
+      zoomTo(zoomRoot.path.includes("/") ? up : root);
     }
   });
   svg.appendChild(c);
@@ -308,7 +328,7 @@ function render() {
     } else {
       const a = document.createElement("a");
       a.textContent = node.name;
-      a.addEventListener("click", () => { zoomRoot = node; render(); });
+      a.addEventListener("click", () => zoomTo(node));
       cr.appendChild(a);
     }
   });
@@ -322,7 +342,7 @@ function render() {
       `<span class="sw" style="background:var(--muted)"></span>` +
       `<span class="nm">${root.name}</span>` +
       `<span class="tm">${fmt(root.seconds)} · 100%</span>`;
-    row.addEventListener("click", () => { zoomRoot = root; render(); });
+    row.addEventListener("click", () => zoomTo(root));
     lg.appendChild(row);
   }
   for (const f of root.children) {
@@ -331,7 +351,7 @@ function render() {
       `<span class="sw" style="background:${famColor(f.name)}"></span>` +
       `<span class="nm">${f.name}</span>` +
       `<span class="tm">${fmt(f.seconds)} · ${(100 * f.seconds / total).toFixed(0)}%</span>`;
-    row.addEventListener("click", () => { zoomRoot = f; render(); });
+    row.addEventListener("click", () => zoomTo(f));
     lg.appendChild(row);
   }
 }
@@ -367,7 +387,7 @@ function render() {
   }
 })();
 
-render();
+applyHash();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
 new MutationObserver(render).observe(document.documentElement,
   { attributes: true, attributeFilter: ["data-theme"] });
