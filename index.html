@@ -316,6 +316,15 @@ function render() {
   /* legend */
   const lg = document.getElementById("legend");
   lg.innerHTML = "";
+  {
+    const row = document.createElement("div"); row.className = "row";
+    row.innerHTML =
+      `<span class="sw" style="background:var(--muted)"></span>` +
+      `<span class="nm">${root.name}</span>` +
+      `<span class="tm">${fmt(root.seconds)} · 100%</span>`;
+    row.addEventListener("click", () => { zoomRoot = root; render(); });
+    lg.appendChild(row);
+  }
   for (const f of root.children) {
     const row = document.createElement("div"); row.className = "row";
     row.innerHTML =
