@@ -70,8 +70,10 @@
   path.arc:hover { filter: brightness(1.08); }
   text.albl { pointer-events: none; fill: #fff; font-size: 11px;
               dominant-baseline: central; }
-  text.center-t { fill: var(--text-primary); font-weight: 600; }
-  text.center-s { fill: var(--text-secondary); font-size: 12px; }
+  text.center-t { fill: var(--text-primary); font-weight: 600;
+                  pointer-events: none; }
+  text.center-s { fill: var(--text-secondary); font-size: 12px;
+                  pointer-events: none; }
   details { margin-top: 16px; border-top: 1px solid var(--hairline); padding-top: 10px; }
   summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
   table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 12.5px; }
