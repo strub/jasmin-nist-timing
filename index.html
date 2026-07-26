@@ -138,6 +138,12 @@ function shade(hex, t) {
     Math.round(v + (s[i] - v) * t).toString(16).padStart(2, "0")).join("");
 }
 
+/* label ink for a given arc fill: dark on pale, white on saturated */
+function inkFor(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#1a1a19" : "#ffffff";
+}
+
 /* ---- layout ---- */
 const W = 660, CX = W / 2, R0 = 52, RING = 46;
 let zoomRoot = root;
@@ -187,7 +193,8 @@ function render() {
     if (node !== zoomRoot) {
       const r0 = R0 + ring * RING, r1 = r0 + RING - 2;
       const base = famColor(famOf(node));
-      const t = Math.min(0.62, 0.16 * (node.depth - 1));
+      const rel = node.depth - zoomRoot.depth;
+      const t = Math.min(0.62, 0.16 * (rel - 1));
       const fill = node.children ? shade(base, t) : shade(base, Math.min(0.7, t + 0.10));
       const path = el("path", {
         d: arcPath(a0, a1, r0, r1), fill, class: "arc",
@@ -211,9 +218,9 @@ function render() {
       svg.appendChild(path);
 
       /* direct label following the arc's curve, one consistent (clockwise)
-         reading direction for every label */
+         reading direction for every label (directories and files alike) */
       const span = a1 - a0, rm = (r0 + r1) / 2, arcLen = span * rm;
-      if (node.children && arcLen > 34) {
+      if (arcLen > 34) {
         const p = (a, r) => [CX + r * Math.sin(a), CX - r * Math.cos(a)];
         const large = span > Math.PI ? 1 : 0;
         const [xs, ys] = p(a0, rm);
@@ -225,6 +232,7 @@ function render() {
         });
         svg.appendChild(guide);
         const txt = el("text", { class: "albl" });
+        txt.style.fill = inkFor(fill);
         const tp = el("textPath", { href: "#" + id, startOffset: "50%",
                                     "text-anchor": "middle" });
         tp.textContent = node.name;
