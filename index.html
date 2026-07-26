@@ -51,6 +51,10 @@
                 text-overflow: ellipsis; white-space: nowrap; }
   .legend .tm { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  #crumbs { font-size: 13px; margin-top: 10px; color: var(--muted); }
+  #crumbs a { color: var(--text-primary); cursor: pointer; text-decoration: none; }
+  #crumbs a:hover { text-decoration: underline; }
+  #crumbs .here { color: var(--text-secondary); font-weight: 600; }
   #tip {
     position: fixed; pointer-events: none; display: none; z-index: 10;
     background: var(--surface-1); color: var(--text-primary);
@@ -79,12 +83,14 @@
 <div class="card">
   <h1>EasyCrypt checking time by file</h1>
   <div class="sub" id="subtitle"></div>
+  <div id="crumbs"></div>
   <div class="layout">
     <div id="chart"></div>
     <div class="legend" id="legend"></div>
   </div>
   <div class="hint">Cumulative per-file checking time (a parallel run's wall
-    time is lower). Click a directory to zoom in, the center to zoom out.</div>
+    time is lower). Click a directory to zoom in; zoom out with the
+    breadcrumb above the chart (or by clicking the center).</div>
   <details><summary>All files as a table</summary>
     <table id="tbl"><thead><tr>
       <th>file</th><th class="n">seconds</th><th class="n">% of total</th>
@@ -271,6 +277,33 @@ function render() {
     }
     if (n <= 2) txt.remove();
   }
+
+  /* breadcrumb: every ancestor is clickable */
+  const cr = document.getElementById("crumbs");
+  cr.innerHTML = "";
+  const trail = [root];
+  if (zoomRoot !== root) {
+    let node = root;
+    for (const p of zoomRoot.path.split("/")) {
+      node = node.children.find(k => k.name === p);
+      if (!node) break;
+      trail.push(node);
+    }
+  }
+  trail.forEach((node, i) => {
+    if (i) cr.appendChild(document.createTextNode(" / "));
+    if (node === zoomRoot) {
+      const sp = document.createElement("span");
+      sp.className = "here";
+      sp.textContent = node.name;
+      cr.appendChild(sp);
+    } else {
+      const a = document.createElement("a");
+      a.textContent = node.name;
+      a.addEventListener("click", () => { zoomRoot = node; render(); });
+      cr.appendChild(a);
+    }
+  });
 
   /* legend */
   const lg = document.getElementById("legend");
