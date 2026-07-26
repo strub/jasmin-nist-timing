@@ -50,7 +50,9 @@
   .legend .nm { flex: 1; color: var(--text-primary); overflow: hidden;
                 text-overflow: ellipsis; white-space: nowrap; }
   .legend .tm { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .legend .usage { color: var(--muted); font-size: 12px; margin-top: 12px;
+                   line-height: 1.5; border-top: 1px solid var(--hairline);
+                   padding-top: 10px; }
   #crumbs { font-size: 13px; margin-top: 10px; color: var(--muted); }
   #crumbs a { color: var(--text-primary); cursor: pointer; text-decoration: none; }
   #crumbs a:hover { text-decoration: underline; }
@@ -351,6 +353,14 @@ function render() {
     row.addEventListener("click", () => zoomTo(f));
     lg.appendChild(row);
   }
+  const usage = document.createElement("div");
+  usage.className = "usage";
+  usage.textContent =
+    "Click a slice or a legend entry to zoom in; zoom out with the " +
+    "breadcrumb or the chart center. The URL anchor follows the zoom, so " +
+    "links open pre-zoomed. Times are cumulative per file (a parallel " +
+    "run's wall time is lower).";
+  lg.appendChild(usage);
 }
 
 /* subtitle from meta */
