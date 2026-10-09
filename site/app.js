@@ -214,7 +214,7 @@ function rangeBar(params) {
 
 async function timeline(params) {
   nav("trends");
-  if (!COMMITS.length) { view.replaceChildren(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
+  if (!COMMITS.length) return emptyView("trends");
   // the trends' values live in the series files, loaded with this tab only
   let ps = null, bs = {};
   try {
@@ -703,11 +703,17 @@ async function prView(number, params) {
 }
 
 // ---------------------------------------------------------------- router
+// before the first published run: say so, under the tab that was asked for
+function emptyView(tab) {
+  nav(tab);
+  view.replaceChildren(el("div", { class: "card empty", text: "No results recorded yet: they appear after the next CI run on main." }));
+}
+
 function route() {
   const { parts, params } = parseHash();
   const [v, arg] = parts;
   if (!v || v === "results" || v === "commit") {
-    if (!COMMITS.length) return timeline(params);   // shows "no results yet"
+    if (!COMMITS.length) return emptyView("results");
     const c = arg ? resolve(arg) : COMMITS[COMMITS.length - 1];
     if (c) return commitView(c, params);
   } else if (v === "trends") {
@@ -717,7 +723,7 @@ function route() {
   } else if (v === "pr" && /^\d+$/.test(arg || "")) {
     return prView(+arg, params);
   } else if (v === "compare") {
-    if (!COMMITS.length) return timeline(params);
+    if (!COMMITS.length) return emptyView("compare");
     let a, b;
     if (arg && arg.includes("..")) { const [x, y] = arg.split(".."); a = resolve(x); b = resolve(y); }
     else { b = resolve(arg) || COMMITS[COMMITS.length - 1]; a = prevOf(b) || b; }
