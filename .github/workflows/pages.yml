@@ -1,0 +1,46 @@
+name: pages
+
+# Rebuilds the site on every push: the commit index is generated from the
+# result files under data/ (pushed by jasmin-nist's CI), then site/, data/
+# and the index are deployed to GitHub Pages.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Result pushes can arrive in bursts (proofs and bench finish independently);
+# only the latest state needs deploying.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          mkdir -p _site
+          cp -R site/. _site/
+          cp -R data _site/data
+          python3 tools/build_index.py data _site/index.json
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v5

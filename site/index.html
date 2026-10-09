@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jasmin-nist results</title>
+<style>
+  :root { --bg: #fff; --fg: #1d1d1f; --muted: #6e6e73; --line: #e5e5ea; --link: #0a64d8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161618; --fg: #f2f2f7; --muted: #a1a1a6; --line: #2c2c2e; --link: #5aa2ff; }
+  }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg);
+         font: 14px/1.5 system-ui, -apple-system, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.muted { color: var(--muted); margin: 0 0 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--link); }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>jasmin-nist results</h1>
+  <p class="muted" id="status">Loading…</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>commit</th><th>date</th><th>subject</th>
+                 <th class="num">proofs</th><th>bench</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g,
+  c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const mins = s => `${(s / 60).toFixed(1)} min`;
+fetch("index.json")
+  .then(r => r.json())
+  .then(ix => {
+    const rows = ix.commits.slice().reverse().map(c => {
+      const sha = c.commit, short = sha.slice(0, 8);
+      const proofs = c.proofs
+        ? `<a href="data/proofs/${sha}.json">${mins(c.proofs.total_seconds)}</a>` : "";
+      const bench = Object.keys(c.bench || {})
+        .map(r => `<a href="data/bench/${esc(r)}/${sha}.json">${esc(r)}</a>`).join(" ");
+      return `<tr><td><code>${short}</code></td><td>${esc((c.commit_date || "").slice(0, 10))}</td>
+              <td>${esc(c.subject)}</td><td class="num">${proofs}</td><td>${bench}</td></tr>`;
+    });
+    document.getElementById("rows").innerHTML = rows.join("");
+    document.getElementById("status").textContent =
+      `${ix.commits.length} recorded commits · index generated ${ix.generated}`;
+  })
+  .catch(e => { document.getElementById("status").textContent = `Cannot load index: ${e}`; });
+</script>
+</body>
+</html>
