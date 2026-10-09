@@ -35,6 +35,7 @@ const OPS = { KEM: ["keypair", "encaps", "decaps"], SIG: ["keygen", "sign", "ver
 
 let INDEX = null, COMMITS = [], POS = new Map();
 const cache = new Map();
+const benchHidden = new Map();   // runner -> Set of hidden backends
 const fetchJSON = url => {
   if (!cache.has(url)) cache.set(url, fetch(url).then(r => r.ok ? r.json() : Promise.reject(new Error(`${url}: ${r.status}`))));
   return cache.get(url);
@@ -99,57 +100,7 @@ function timeline(params) {
   view.replaceChildren();
   if (!COMMITS.length) { view.append(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
 
-  // bench, one card per machine
-  for (const runner of INDEX.bench_runners) {
-    const bc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.bench?.[runner]);
-    const card = el("div", { class: "card" });
-    view.append(card);
-    card.append(el("h2", { text: `Benchmarks · ${runner}` }),
-                el("p", { class: "sub", text: "Median cycles per operation (median over the passes); the band spans the " +
-                  "passes' quartiles. Click a legend entry to hide a backend; click a commit to compare it with the previous one." }));
-    if (!bc.length) { card.append(el("div", { class: "empty", text: "No benchmarks yet." })); continue; }
-    const keys = new Set(bc.flatMap(([c]) => Object.keys(c.bench[runner].m)));
-    const schemes = [...new Set([...keys].map(k => k.split("|")[0]))].sort();
-    const withJasmin = schemes.filter(s => keys.has(`${s}|jasmin|keypair`) || keys.has(`${s}|jasmin|keygen`));
-    const scheme = schemes.includes(params.get("scheme")) ? params.get("scheme") : (withJasmin[0] || schemes[0]);
-    const bar = el("div", { class: "row", style: "margin-bottom:6px" });
-    for (const s of schemes) {
-      const b = el("button", { class: s === scheme ? "on" : "", text: s, "aria-pressed": String(s === scheme) });
-      b.addEventListener("click", () => { setParam("scheme", s); timeline(parseHash().params); });
-      bar.append(b);
-    }
-    card.append(bar);
-    const backends = [...new Set([...keys].filter(k => k.startsWith(scheme + "|")).map(k => k.split("|")[1]))].sort(byBackend);
-    const ops = [...new Set([...keys].filter(k => k.startsWith(scheme + "|")).map(k => k.split("|")[2]))];
-    const opOrder = (ops.includes("keypair") ? OPS.KEM : OPS.SIG).filter(o => ops.includes(o));
-    const shared = backends.map(b => ({ key: b, label: b, color: backendColor(b), hidden: b === "pqcrystals-ref" }));
-    const marks = envMarks(c => c.bench?.[runner], c => benchEnv(c, runner));
-    const charts = [];
-    legend(card, shared, () => charts.forEach(ch => ch.redraw()));
-    const grid = el("div", { class: "grid3" });
-    card.append(grid);
-    for (const op of opOrder) {
-      const cell = el("div");
-      grid.append(cell);
-      cell.append(el("h3", { text: op, style: "margin-top:4px" }));
-      const series = shared.map(s => {
-        const ser = { ...s, points: bc.filter(([c]) => c.bench[runner].m[`${scheme}|${s.key}|${op}`])
-          .map(([c, i]) => { const [m, lo, hi] = c.bench[runner].m[`${scheme}|${s.key}|${op}`]; return { x: i, y: m, lo, hi }; }) };
-        Object.defineProperty(ser, "hidden", { get: () => s.hidden });
-        return ser;
-      });
-      charts.push(lineChart(cell, series, { xLabel: x => short(COMMITS[x].commit), xTitle, envMarks: marks,
-        yFormat: kcycles, height: 190, onPick: x => go(`#/compare/${COMMITS[x].commit}`),
-        aria: `${scheme} ${op} cycles per commit` }));
-    }
-    const last = bc[bc.length - 1][0];
-    const tb = el("tbody");
-    for (const b of backends) tb.append(el("tr", {}, el("td", { text: b }),
-      ...opOrder.map(op => { const v = last.bench[runner].m[`${scheme}|${b}|${op}`]; return el("td", { class: "num", text: v ? cycles(v[0]) : "" }); })));
-    card.append(el("details", {}, el("summary", { text: `Table view: ${scheme} at the latest commit (${short(last.commit)})` }),
-      el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "backend" }),
-        ...opOrder.map(o => el("th", { class: "num", text: o })))), tb))));
-  }
+  for (const runner of INDEX.bench_runners) view.append(benchCard(runner, params));
 
   // proofs
   const pc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.proofs);
@@ -192,6 +143,66 @@ function timeline(params) {
         el("th", { text: "commit" }), el("th", { text: "date" }), el("th", { class: "num", text: "total" }),
         ...dirs.map(d => el("th", { class: "num", text: d })))), tb))));
   }
+}
+
+function benchCard(runner, params) {
+  const bc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.bench?.[runner]);
+  const card = el("div", { class: "card" });
+  card.append(el("h2", { text: `Benchmarks · ${runner}` }),
+              el("p", { class: "sub", text: "Median cycles per operation (median over the passes); the band spans the " +
+                "passes' quartiles. Click a legend entry to hide a backend; click a commit to compare it with the previous one." }));
+  if (!bc.length) { card.append(el("div", { class: "empty", text: "No benchmarks yet." })); return card; }
+  const keys = new Set(bc.flatMap(([c]) => Object.keys(c.bench[runner].m)));
+  const schemes = [...new Set([...keys].map(k => k.split("|")[0]))].sort();
+  const withJasmin = schemes.filter(s => keys.has(`${s}|jasmin|keypair`) || keys.has(`${s}|jasmin|keygen`));
+  const scheme = schemes.includes(params.get("scheme")) ? params.get("scheme") : (withJasmin[0] || schemes[0]);
+  const bar = el("div", { class: "row", style: "margin-bottom:6px" });
+  for (const s of schemes) {
+    const b = el("button", { class: s === scheme ? "on" : "", text: s, "aria-pressed": String(s === scheme) });
+    // rebuild this card only: re-rendering the page would scroll to the top
+    b.addEventListener("click", () => { setParam("scheme", s); card.replaceWith(benchCard(runner, parseHash().params)); });
+    bar.append(b);
+  }
+  card.append(bar);
+  const backends = [...new Set([...keys].filter(k => k.startsWith(scheme + "|")).map(k => k.split("|")[1]))].sort(byBackend);
+  const ops = [...new Set([...keys].filter(k => k.startsWith(scheme + "|")).map(k => k.split("|")[2]))];
+  const opOrder = (ops.includes("keypair") ? OPS.KEM : OPS.SIG).filter(o => ops.includes(o));
+  // hidden backends persist across scheme switches (pqcrystals-ref off by default)
+  if (!benchHidden.has(runner)) benchHidden.set(runner, new Set(["pqcrystals-ref"]));
+  const hid = benchHidden.get(runner);
+  const shared = backends.map(b => {
+    const ser = { key: b, label: b, color: backendColor(b) };
+    Object.defineProperty(ser, "hidden", { get: () => hid.has(b),
+      set: v => { if (v) hid.add(b); else hid.delete(b); } });
+    return ser;
+  });
+  const marks = envMarks(c => c.bench?.[runner], c => benchEnv(c, runner));
+  const charts = [];
+  legend(card, shared, () => charts.forEach(ch => ch.redraw()));
+  const grid = el("div", { class: "grid3" });
+  card.append(grid);
+  for (const op of opOrder) {
+    const cell = el("div");
+    grid.append(cell);
+    cell.append(el("h3", { text: op, style: "margin-top:4px" }));
+    const series = shared.map(s => {
+      const ser = { key: s.key, label: s.label, color: s.color, points: bc.filter(([c]) => c.bench[runner].m[`${scheme}|${s.key}|${op}`])
+        .map(([c, i]) => { const [m, lo, hi] = c.bench[runner].m[`${scheme}|${s.key}|${op}`]; return { x: i, y: m, lo, hi }; }) };
+      Object.defineProperty(ser, "hidden", { get: () => s.hidden });
+      return ser;
+    });
+    charts.push(lineChart(cell, series, { xLabel: x => short(COMMITS[x].commit), xTitle, envMarks: marks,
+      yFormat: kcycles, height: 190, onPick: x => go(`#/compare/${COMMITS[x].commit}`),
+      aria: `${scheme} ${op} cycles per commit` }));
+  }
+  const last = bc[bc.length - 1][0];
+  const tb = el("tbody");
+  for (const b of backends) tb.append(el("tr", {}, el("td", { text: b }),
+    ...opOrder.map(op => { const v = last.bench[runner].m[`${scheme}|${b}|${op}`]; return el("td", { class: "num", text: v ? cycles(v[0]) : "" }); })));
+  card.append(el("details", {}, el("summary", { text: `Table view: ${scheme} at the latest commit (${short(last.commit)})` }),
+    el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "backend" }),
+      ...opOrder.map(o => el("th", { class: "num", text: o })))), tb))));
+  return card;
 }
 
 // ---------------------------------------------------------------- commit
