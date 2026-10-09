@@ -39,6 +39,12 @@ export function kcycles(v) {
   if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(v >= 1e5 ? 0 : 1) + "k";
   return String(Math.round(v));
 }
+// axis ticks: round values without decimals (25k, 1.5M)
+export function kround(v) {
+  if (Math.abs(v) >= 1e6) return `${+(v / 1e6).toFixed(1)}M`;
+  if (Math.abs(v) >= 1e3) return `${+(v / 1e3).toFixed(1)}k`;
+  return String(Math.round(v));
+}
 export function dur(s) {
   if (s >= 3600) return (s / 3600).toFixed(2) + " h";
   if (s >= 60) return (s / 60).toFixed(1) + " min";

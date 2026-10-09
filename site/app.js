@@ -11,7 +11,7 @@
 // (#/commit/<sha> is kept as an alias of #/results/<sha>.)
 // Commit ids may be abbreviated.
 
-import { el, short, day, dur, minutes, cycles, kcycles, delta, deltaEl } from "./util.js";
+import { el, short, day, dur, minutes, cycles, kcycles, kround, delta, deltaEl } from "./util.js";
 import { lineChart, legend, barsH } from "./chart.js";
 import { sunburst } from "./sunburst.js";
 
@@ -457,6 +457,8 @@ function benchBars(runner, m) {
   });
   const charts = [];
   legend(wrap, shared, () => charts.forEach(c => c.redraw()));
+  wrap.append(el("p", { class: "sub", style: "margin:2px 0 0",
+    text: "Bars: median cycles (lower is better); ×n: relative to jasmin. Hover a bar for the passes' quartiles." }));
   for (const s of schemes) {
     const ks = Object.keys(m).filter(k => k.startsWith(s + "|"));
     const ops0 = [...new Set(ks.map(k => k.split("|")[2]))];
@@ -472,11 +474,11 @@ function benchBars(runner, m) {
       const rows = shared.filter(b => m[`${s}|${b.key}|${op}`]).map(b => {
         const [v, lo, hi] = m[`${s}|${b.key}|${op}`];
         const r = { key: b.key, label: b.label, color: b.color, value: v, lo, hi,
-                    note: jas && b.key !== "jasmin" ? `${(v / jas[0]).toFixed(2)}× jasmin` : null };
+                    note: jas && b.key !== "jasmin" ? `×${(v / jas[0]).toFixed(2)}` : null };
         Object.defineProperty(r, "hidden", { get: () => b.hidden });
         return r;
       });
-      charts.push(barsH(cell, rows, { format: kcycles, title: `${s} ${op} · median cycles`,
+      charts.push(barsH(cell, rows, { format: kcycles, tickFormat: kround, title: `${s} ${op} · median cycles`,
                                       aria: `${s} ${op}: median cycles per backend` }));
     }
     wrap.append(el("details", {}, el("summary", { text: `Table view: ${s}` }),

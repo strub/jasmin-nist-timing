@@ -233,8 +233,10 @@ export function legend(host, series, onToggle) {
 export { setText };
 
 // Horizontal bars from a zero baseline, one per entity (e.g. backend).
-// rows: [{ key, label, color, value, lo?, hi?, note? }]   lo/hi: whisker
-// opts: { format(v), aria, title }   note: short text after the value label
+// rows: [{ key, label, color, value, lo?, hi?, note? }]
+//   lo/hi: spread, shown in the tooltip; note: short secondary text after
+//   the value label (muted)
+// opts: { format(v), tickFormat(v), aria, title }
 export function barsH(host, rows, opts = {}) {
   const wrap = el("div", { class: "chart" });
   host.appendChild(wrap);
@@ -256,8 +258,8 @@ function renderBars(wrap, rows, opts) {
   const fmt = opts.format || String;
   wrap.innerHTML = "";
   const labW = Math.min(104, W * 0.32);
-  // room on the right for "value · note" at the tip of the longest bar
-  const M = { l: labW, r: Math.min(130, W * 0.36), t: 4, b: 20 };
+  // room on the right for "value ×ratio" at the tip of the longest bar
+  const M = { l: labW, r: Math.min(96, W * 0.3), t: 4, b: 20 };
   const H = M.t + M.b + vis.length * (BAR + GAP) - (vis.length ? GAP : 0);
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${Math.max(H, 40)}`, role: "img",
                              "aria-label": opts.aria || "bar chart" });
@@ -276,7 +278,7 @@ function renderBars(wrap, rows, opts) {
   for (const t of ticks) {
     g.appendChild(svgEl("line", { x1: px(t), x2: px(t), y1: M.t, y2: H - M.b }));
     const lab = svgEl("text", { x: px(t), y: H - M.b + 14, "text-anchor": t ? "middle" : "start" });
-    lab.textContent = fmt(t);
+    lab.textContent = (opts.tickFormat || fmt)(t);
     g.appendChild(lab);
   }
   svg.appendChild(g);
@@ -290,14 +292,13 @@ function renderBars(wrap, rows, opts) {
     const x0 = px(0), x1 = Math.max(x0 + 1, px(r.value)), rad = Math.min(4, (x1 - x0) / 2);
     svg.appendChild(svgEl("path", { fill: r.color, class: "bar",
       d: `M${x0},${y}H${x1 - rad}Q${x1},${y} ${x1},${y + rad}V${y + BAR - rad}Q${x1},${y + BAR} ${x1 - rad},${y + BAR}H${x0}Z` }));
-    if (r.lo != null && r.hi != null && px(r.hi) - px(r.lo) >= 1) {
-      const wy = y + BAR / 2;
-      svg.appendChild(svgEl("path", { class: "whisker",
-        d: `M${px(r.lo)},${wy}H${px(r.hi)}M${px(r.lo)},${wy - 4}V${wy + 4}M${px(r.hi)},${wy - 4}V${wy + 4}` }));
+    const val = svgEl("text", { x: x1 + 6, y: y + BAR / 2, "dominant-baseline": "middle", class: "end" });
+    val.textContent = fmt(r.value);
+    if (r.note) {
+      const nt = svgEl("tspan", { class: "note", dx: 6 });
+      nt.textContent = r.note;
+      val.appendChild(nt);
     }
-    const tipX = Math.max(x1, r.hi != null ? px(r.hi) : x1);   // clear of the whisker
-    const val = svgEl("text", { x: tipX + 6, y: y + BAR / 2, "dominant-baseline": "middle", class: "end" });
-    val.textContent = fmt(r.value) + (r.note ? ` · ${r.note}` : "");
     svg.appendChild(val);
     const hit = svgEl("rect", { class: "hit", x: 0, y: y - GAP / 2, width: W, height: BAR + GAP, tabindex: 0,
                                 style: "cursor:default" });
