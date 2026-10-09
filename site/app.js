@@ -6,6 +6,8 @@
 //   #/trends                 timelines             (?scheme=ML-KEM-768)
 //   #/compare/<a>..<b>       b against a           (?zoom=dir/sub)
 //   #/compare/<b>            b against the commit recorded just before it
+//   #/prs                    pull requests with recorded benchmarks
+//   #/pr/<number>            a PR's bench run against its merge base (?run=<sha>)
 // (#/commit/<sha> is kept as an alias of #/results/<sha>.)
 // Commit ids may be abbreviated.
 
@@ -49,6 +51,13 @@ const fetchJSON = url => {
   return cache.get(url);
 };
 const proofsFile = sha => fetchJSON(`data/proofs/${sha}.json`);
+const benchFile = (runner, sha) => fetchJSON(`data/bench/${runner}/${sha}.json`);
+const prBenchFile = (n, runner, sha) => fetchJSON(`data/pr/${n}/bench/${runner}/${sha}.json`);
+const proofsSeries = () => fetchJSON("series/proofs.json");
+const benchSeries = runner => fetchJSON(`series/bench-${runner}.json`);
+// a bench result file -> { "scheme|backend|operation": [median, p25, p75] }
+const toM = d => Object.fromEntries((d.results || []).map(r =>
+  [`${r.scheme}|${r.backend}|${r.operation}`, [r.median, r.p25 ?? r.median, r.p75 ?? r.median]]));
 
 function resolve(id) {
   if (!id) return null;
@@ -188,22 +197,29 @@ function rangeBar(params) {
     b.addEventListener("click", () => {
       setParam("range", o);
       const y = scrollY;               // keep the reader's place
-      timeline(parseHash().params);
-      scrollTo(0, y);
+      timeline(parseHash().params).then(() => scrollTo(0, y));
     });
     bar.append(b);
   }
   return bar;
 }
 
-function timeline(params) {
+async function timeline(params) {
   nav("trends");
+  if (!COMMITS.length) { view.replaceChildren(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
+  // the trends' values live in the series files, loaded with this tab only
+  let ps = null, bs = {};
+  try {
+    const hasProofs = COMMITS.some(c => c.proofs);
+    [ps, ...bs] = await Promise.all([hasProofs ? proofsSeries() : null,
+                                     ...INDEX.bench_runners.map(r => benchSeries(r))]);
+    bs = Object.fromEntries(INDEX.bench_runners.map((r, i) => [r, bs[i]]));
+  } catch (e) { view.replaceChildren(el("div", { class: "card empty", text: `Cannot load the trends: ${e}` })); return; }
   view.replaceChildren();
-  if (!COMMITS.length) { view.append(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
   if (COMMITS.length > RANGES[0]) view.append(rangeBar(params));
   const start = rangeStart(params);
 
-  for (const runner of INDEX.bench_runners) view.append(benchCard(runner, params, start));
+  for (const runner of INDEX.bench_runners) view.append(benchCard(runner, params, start, bs[runner]));
 
   // proofs
   const pc = COMMITS.map((c, i) => [c, i]).filter(([c, i]) => c.proofs && i >= start);
@@ -225,9 +241,11 @@ function timeline(params) {
     lineChart(left, [{ key: "total", label: "total", color: "var(--s1)",
       points: pc.map(([c, i]) => ({ x: i, y: c.proofs.total_seconds / 60 })) }],
       { ...common, yFormat: v => `${+v.toFixed(1)} min`, height: 170, aria: "total proof-checking time per commit" });
-    const dirs = [...new Set(pc.flatMap(([c]) => Object.keys(c.proofs.groups || {})))].sort();
+    const at = new Map(ps.commits.map((sha, k) => [sha, k]));
+    const group = (c, d) => ps.groups[d]?.[at.get(c.commit)] ?? null;
+    const dirs = Object.keys(ps.groups).filter(d => pc.some(([c]) => group(c, d) != null)).sort();
     const series = dirs.map((d, k) => ({ key: d, label: d, color: `var(--s${k % 8 + 1})`,
-      points: pc.filter(([c]) => c.proofs.groups?.[d] != null).map(([c, i]) => ({ x: i, y: c.proofs.groups[d] / 60 })) }));
+      points: pc.filter(([c]) => group(c, d) != null).map(([c, i]) => ({ x: i, y: group(c, d) / 60 })) }));
     right.append(el("h3", { text: "By top-level directory", style: "margin-top:4px" }));
     const host = el("div");
     let chart;
@@ -239,7 +257,7 @@ function timeline(params) {
     for (const [c] of pc.slice().reverse()) {
       tb.append(el("tr", {}, el("td", {}, el("a", { href: `#/results/${c.commit}`, class: "mono", text: short(c.commit) })),
         el("td", { text: day(c.commit_date) }), el("td", { class: "num", text: minutes(c.proofs.total_seconds) }),
-        ...dirs.map(d => el("td", { class: "num", text: c.proofs.groups?.[d] != null ? minutes(c.proofs.groups[d]) : "" }))));
+        ...dirs.map(d => el("td", { class: "num", text: group(c, d) != null ? minutes(group(c, d)) : "" }))));
     }
     card.append(el("details", {}, el("summary", { text: "Table view (minutes)" }),
       el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {},
@@ -248,14 +266,16 @@ function timeline(params) {
   }
 }
 
-function benchCard(runner, params, start = 0) {
-  const bc = COMMITS.map((c, i) => [c, i]).filter(([c, i]) => c.bench?.[runner] && i >= start);
+function benchCard(runner, params, start, series) {
+  const at = new Map(series.commits.map((sha, k) => [sha, k]));
+  const val = (c, key) => series.m[key]?.[at.get(c.commit)] ?? null;
+  const bc = COMMITS.map((c, i) => [c, i]).filter(([c, i]) => c.bench?.[runner] && at.has(c.commit) && i >= start);
   const card = el("div", { class: "card" });
   card.append(el("h2", { text: `Benchmarks · ${runner}` }),
               el("p", { class: "sub", text: "Median cycles per operation (median over the passes); the band spans the " +
                 "passes' quartiles. Click a legend entry to hide a backend; click a commit to compare it with the previous one." }));
   if (!bc.length) { card.append(el("div", { class: "empty", text: "No benchmarks yet." })); return card; }
-  const keys = new Set(bc.flatMap(([c]) => Object.keys(c.bench[runner].m)));
+  const keys = new Set(Object.keys(series.m).filter(k => bc.some(([c]) => val(c, k))));
   const schemes = [...new Set([...keys].map(k => k.split("|")[0]))].sort(bySchemeOrder);
   const withJasmin = schemes.filter(s => keys.has(`${s}|jasmin|keypair`) || keys.has(`${s}|jasmin|keygen`));
   const scheme = schemes.includes(params.get("scheme")) ? params.get("scheme") : (withJasmin[0] || schemes[0]);
@@ -263,7 +283,7 @@ function benchCard(runner, params, start = 0) {
   for (const s of schemes) {
     const b = el("button", { class: s === scheme ? "on" : "", text: s, "aria-pressed": String(s === scheme) });
     // rebuild this card only: re-rendering the page would scroll to the top
-    b.addEventListener("click", () => { setParam("scheme", s); card.replaceWith(benchCard(runner, parseHash().params, start)); });
+    b.addEventListener("click", () => { setParam("scheme", s); card.replaceWith(benchCard(runner, parseHash().params, start, series)); });
     bar.append(b);
   }
   card.append(bar);
@@ -289,8 +309,9 @@ function benchCard(runner, params, start = 0) {
     grid.append(cell);
     cell.append(el("h3", { text: op, style: "margin-top:4px" }));
     const series = shared.map(s => {
-      const ser = { key: s.key, label: s.label, color: s.color, points: bc.filter(([c]) => c.bench[runner].m[`${scheme}|${s.key}|${op}`])
-        .map(([c, i]) => { const [m, lo, hi] = c.bench[runner].m[`${scheme}|${s.key}|${op}`]; return { x: i, y: m, lo, hi }; }) };
+      const key = `${scheme}|${s.key}|${op}`;
+      const ser = { key: s.key, label: s.label, color: s.color, points: bc.filter(([c]) => val(c, key))
+        .map(([c, i]) => { const [m, lo, hi] = val(c, key); return { x: i, y: m, lo, hi }; }) };
       Object.defineProperty(ser, "hidden", { get: () => s.hidden });
       return ser;
     });
@@ -301,7 +322,7 @@ function benchCard(runner, params, start = 0) {
   const last = bc[bc.length - 1][0];
   const tb = el("tbody");
   for (const b of backends) tb.append(el("tr", {}, el("td", { text: b }),
-    ...opOrder.map(op => { const v = last.bench[runner].m[`${scheme}|${b}|${op}`]; return el("td", { class: "num", text: v ? cycles(v[0]) : "" }); })));
+    ...opOrder.map(op => { const v = val(last, `${scheme}|${b}|${op}`); return el("td", { class: "num", text: v ? cycles(v[0]) : "" }); })));
   card.append(el("details", {}, el("summary", { text: `Table view: ${scheme} at the latest commit (${short(last.commit)})` }),
     el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "backend" }),
       ...opOrder.map(o => el("th", { class: "num", text: o })))), tb))));
@@ -340,7 +361,10 @@ async function commitView(c, params) {
     card.append(el("h2", { text: `Benchmarks · ${runner}` }),
       el("p", { class: "sub", text: `Median cycles, ${b.reps || 1} passes × ${b.iters || "?"} iterations; ± half the passes' interquartile range. ` +
         Object.entries(b.env || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") }));
-    card.append(benchBars(runner, b.m));
+    const host = el("div");
+    card.append(host);
+    try { host.append(benchBars(runner, toM(await benchFile(runner, c.commit)))); }
+    catch (e) { host.append(el("div", { class: "empty", text: String(e) })); }
   }
   if (!c.proofs) missing("Proof checking", "proof timings");
   else {
@@ -453,6 +477,30 @@ function benchBars(runner, m) {
   return wrap;
 }
 
+function envNotice(diffs, what) {
+  if (!diffs.length) return null;
+  return el("div", { class: "notice" }, el("strong", { text: `${what}: the environment differs between A and B` }),
+    " — changes may come from it rather than from the code.",
+    el("ul", {}, ...diffs.map(d => el("li", {}, el("span", { text: `${d.key}: ` }), el("span", { class: "mono", text: `${d.a} → ${d.b}` })))));
+}
+
+// Bench comparison A -> B: verdict counts and per-scheme tables. A change
+// counts only if the passes' quartiles separate and it exceeds the floor.
+function benchCompare(ma, mb) {
+  const wrap = el("div");
+  let better = 0, worse = 0;
+  for (const k of Object.keys(mb)) {
+    const x = ma[k], y = mb[k];
+    if (!x) continue;
+    const sig = (y[1] > x[2] || y[2] < x[1]) && Math.abs(y[0] - x[0]) / x[0] >= NOISE.bench;
+    if (sig) y[0] < x[0] ? better++ : worse++;
+  }
+  const n = Object.keys(mb).length;
+  wrap.append(el("p", { class: "sub", text: `${better} faster, ${worse} slower, ${n - better - worse} unchanged ` +
+    `(of ${n} measurements). Cells: A → B median cycles.` }), benchTables(mb, ma));
+  return wrap;
+}
+
 // ---------------------------------------------------------------- compare
 async function compareView(a, b, params) {
   nav("compare");
@@ -487,12 +535,6 @@ async function compareView(a, b, params) {
   head.append(steps);
   if (a === b) head.append(el("div", { class: "notice", text: "A and B are the same commit." }));
 
-  const envNotice = (diffs, what) => {
-    if (!diffs.length) return null;
-    return el("div", { class: "notice" }, el("strong", { text: `${what}: the environment differs between A and B` }),
-      " — changes may come from it rather than from the code.",
-      el("ul", {}, ...diffs.map(d => el("li", {}, el("span", { text: `${d.key}: ` }), el("span", { class: "mono", text: `${d.a} → ${d.b}` })))));
-  };
 
   // bench
   for (const runner of INDEX.bench_runners) {
@@ -503,16 +545,10 @@ async function compareView(a, b, params) {
     if (!ba || !bb) { card.append(el("div", { class: "empty", text: `No benchmark for ${!ba ? "A" : "B"} on this machine.` })); continue; }
     const n = envNotice(envDiff(benchEnv(a, runner), benchEnv(b, runner)), "Bench");
     if (n) card.append(n);
-    let better = 0, worse = 0;
-    for (const k of Object.keys(bb.m)) {
-      const x = ba.m[k], y = bb.m[k];
-      if (!x) continue;
-      const sig = (y[1] > x[2] || y[2] < x[1]) && Math.abs(y[0] - x[0]) / x[0] >= NOISE.bench;
-      if (sig) y[0] < x[0] ? better++ : worse++;
-    }
-    card.append(el("p", { class: "sub", text: `${better} faster, ${worse} slower, ${Object.keys(bb.m).length - better - worse} unchanged ` +
-      `(of ${Object.keys(bb.m).length} measurements). Cells: A → B median cycles.` }));
-    card.append(benchTables(bb.m, ba.m));
+    try {
+      const [ma, mb] = await Promise.all([benchFile(runner, a.commit), benchFile(runner, b.commit)]).then(ds => ds.map(toM));
+      card.append(benchCompare(ma, mb));
+    } catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
   }
 
   // proofs
@@ -584,6 +620,80 @@ async function compareView(a, b, params) {
   }
 }
 
+// ---------------------------------------------------------------- PRs
+function prsView() {
+  nav("prs");
+  const prs = INDEX.prs || [];
+  const card = el("div", { class: "card" }, el("h2", { text: "Pull requests" }),
+    el("p", { class: "sub", text: "Benchmarks of labelled pull requests, each run compared with the PR's merge base on main. " +
+      "PR records are kept apart from main's history." }));
+  view.replaceChildren(card);
+  if (!prs.length) { card.append(el("div", { class: "empty", text: "No pull request benchmarks recorded yet." })); return; }
+  const tb = el("tbody");
+  for (const p of prs)
+    tb.append(el("tr", {}, el("td", {}, el("a", { href: `#/pr/${p.number}`, text: `#${p.number}` })),
+      el("td", { text: p.title || "" }), el("td", { class: "mono", text: p.head_ref || "" }),
+      el("td", { class: "num", text: String(p.runs) }), el("td", { class: "num", text: day(p.last) })));
+  card.append(el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {},
+    el("th", { text: "PR" }), el("th", { text: "title" }), el("th", { text: "branch" }),
+    el("th", { class: "num", text: "runs" }), el("th", { class: "num", text: "last run" }))), tb)));
+}
+
+async function prView(number, params) {
+  nav("prs");
+  view.replaceChildren(el("div", { class: "card empty", text: "Loading…" }));
+  let pr;
+  try { pr = await fetchJSON(`pr/${number}.json`); }
+  catch (e) { view.replaceChildren(el("div", { class: "card empty", text: `No benchmarks recorded for PR #${number}.` })); return; }
+  const runs = pr.runs;
+  const want = params.get("run");
+  const run = (want && runs.filter(r => r.commit.startsWith(want)).pop()) || runs[runs.length - 1];
+  const head = el("div", { class: "card" });
+  view.replaceChildren(head);
+  head.append(el("h2", { text: `PR #${pr.number}${pr.title ? " · " + pr.title : ""}` }),
+    el("p", { class: "sub" }, el("span", { class: "mono", text: pr.head_ref || "" }), " · ",
+       el("a", { href: `${REPO}/pull/${pr.number}`, text: "pull request" }), " · ",
+       el("a", { href: `#/prs`, text: "all PRs" })));
+  if (runs.length > 1) {
+    const sel = el("select", { "aria-label": "PR run" });
+    for (const r of runs.slice().reverse()) {
+      const o = el("option", { value: r.commit, text: `${short(r.commit)} · ${day(r.date)} · ${r.subject || ""}` });
+      if (r === run) o.selected = true;
+      sel.append(o);
+    }
+    sel.addEventListener("change", () => go(`#/pr/${pr.number}?run=${sel.value}`));
+    head.append(el("div", { class: "row" }, el("span", { class: "muted", text: `Run (${runs.length}):` }), sel));
+  }
+  // base: the merge base's main record, else the closest earlier recorded main commit
+  const hasBench = c => c.bench?.[run.runner];
+  let base = COMMITS.find(c => c.commit === run.merge_base && hasBench(c)), approx = false;
+  if (!base && run.merge_base_date) {
+    const earlier = COMMITS.filter(c => hasBench(c) && (c.commit_date || "") <= run.merge_base_date);
+    base = earlier[earlier.length - 1]; approx = !!base;
+  }
+  const card = el("div", { class: "card" });
+  view.append(card);
+  card.append(el("h2", { text: `Benchmarks · ${run.runner}` }),
+    el("p", { class: "sub" }, "A = ", base ? el("a", { href: `#/results/${base.commit}`, class: "mono", text: short(base.commit) }) : "—",
+       " (main) · B = ", el("span", { class: "mono", text: short(run.commit) }), ` (PR run, ${day(run.date)})`,
+       run.run_id ? " · " : null, run.run_id ? el("a", { href: `${REPO}/actions/runs/${run.run_id}`, text: "CI run" }) : null,
+       base ? " · " : null, base ? el("a", { href: `${REPO}/compare/${base.commit}...${run.commit}`, text: "code diff" }) : null));
+  if (!base) {
+    card.append(el("div", { class: "empty", text: `No main commit with a recorded benchmark to compare with (merge base ${short(run.merge_base || "?")}).` }));
+    return;
+  }
+  if (approx) card.append(el("div", { class: "notice", text: `The merge base ${short(run.merge_base)} has no recorded benchmark; ` +
+    `compared with ${short(base.commit)}, the closest earlier main commit that has one.` }));
+  const n = envNotice(envDiff(benchEnv(base, run.runner), { ...run.env, reps: run.reps, iters: run.iters }), "Bench");
+  if (n) card.append(n);
+  try {
+    const [ma, mb] = await Promise.all([benchFile(run.runner, base.commit), prBenchFile(pr.number, run.runner, run.commit)])
+      .then(ds => ds.map(toM));
+    card.append(benchCompare(ma, mb),
+                el("details", {}, el("summary", { text: "The PR run on its own (charts)" }), benchBars(run.runner, mb)));
+  } catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
+}
+
 // ---------------------------------------------------------------- router
 function route() {
   const { parts, params } = parseHash();
@@ -594,6 +704,10 @@ function route() {
     if (c) return commitView(c, params);
   } else if (v === "trends") {
     return timeline(params);
+  } else if (v === "prs") {
+    return prsView();
+  } else if (v === "pr" && /^\d+$/.test(arg || "")) {
+    return prView(+arg, params);
   } else if (v === "compare") {
     if (!COMMITS.length) return timeline(params);
     let a, b;
@@ -608,7 +722,9 @@ fetchJSON("index.json").then(ix => {
   INDEX = ix;
   COMMITS = ix.commits;
   COMMITS.forEach((c, i) => POS.set(c.commit, i));
-  document.getElementById("gen").textContent = `${COMMITS.length} commits · updated ${ix.generated.replace("T", " ").replace("Z", " UTC")}`;
+  const nprs = (ix.prs || []).length;
+  document.getElementById("gen").textContent = `${COMMITS.length} commits${nprs ? ` · ${nprs} PRs` : ""} · ` +
+    `updated ${ix.generated.replace("T", " ").replace("Z", " UTC")}`;
   window.addEventListener("hashchange", route);
   route();
 }).catch(e => view.replaceChildren(el("div", { class: "card empty", text: `Cannot load the index: ${e}` })));

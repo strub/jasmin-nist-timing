@@ -39,7 +39,7 @@ jobs:
           mkdir -p _site
           cp -R site/. _site/
           cp -R data _site/data
-          python3 tools/build_index.py data _site/index.json
+          python3 tools/build_index.py data _site
           v="${GITHUB_SHA::12}"
           sed -i -E "s#(src|href)=\"([a-z]+)\.(js|css)\"#\1=\"\2.\3?v=$v\"#g" _site/index.html
           sed -i -E "s#from \"\./([a-z]+)\.js\"#from \"./\1.js?v=$v\"#g" _site/*.js
