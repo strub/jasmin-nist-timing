@@ -258,8 +258,10 @@ function renderBars(wrap, rows, opts) {
   const fmt = opts.format || String;
   wrap.innerHTML = "";
   const labW = Math.min(104, W * 0.32);
-  // room on the right for "value ×ratio" at the tip of the longest bar
-  const M = { l: labW, r: Math.min(96, W * 0.3), t: 4, b: 20 };
+  // values and notes in aligned columns right of the plot, clear of the grid
+  const VAL = 46, NOTE = vis.some(r => r.note) ? 42 : 0, COLGAP = 10;
+  const M = { l: labW, r: COLGAP + VAL + (NOTE ? 6 + NOTE : 0), t: 4, b: 20 };
+  const xVal = W - (NOTE ? 6 + NOTE : 0), xNote = W;
   const H = M.t + M.b + vis.length * (BAR + GAP) - (vis.length ? GAP : 0);
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${Math.max(H, 40)}`, role: "img",
                              "aria-label": opts.aria || "bar chart" });
@@ -292,14 +294,16 @@ function renderBars(wrap, rows, opts) {
     const x0 = px(0), x1 = Math.max(x0 + 1, px(r.value)), rad = Math.min(4, (x1 - x0) / 2);
     svg.appendChild(svgEl("path", { fill: r.color, class: "bar",
       d: `M${x0},${y}H${x1 - rad}Q${x1},${y} ${x1},${y + rad}V${y + BAR - rad}Q${x1},${y + BAR} ${x1 - rad},${y + BAR}H${x0}Z` }));
-    const val = svgEl("text", { x: x1 + 6, y: y + BAR / 2, "dominant-baseline": "middle", class: "end" });
+    const val = svgEl("text", { x: xVal, y: y + BAR / 2, "dominant-baseline": "middle",
+                                "text-anchor": "end", class: "end" });
     val.textContent = fmt(r.value);
-    if (r.note) {
-      const nt = svgEl("tspan", { class: "note", dx: 6 });
-      nt.textContent = r.note;
-      val.appendChild(nt);
-    }
     svg.appendChild(val);
+    if (r.note) {
+      const nt = svgEl("text", { x: xNote, y: y + BAR / 2, "dominant-baseline": "middle",
+                                 "text-anchor": "end", class: "end note" });
+      nt.textContent = r.note;
+      svg.appendChild(nt);
+    }
     const hit = svgEl("rect", { class: "hit", x: 0, y: y - GAP / 2, width: W, height: BAR + GAP, tabindex: 0,
                                 style: "cursor:default" });
     const show = ev => {
