@@ -4,10 +4,12 @@
     data/proofs/<commit>.json           proof-checking timings (one run)
     data/bench/<runner>/<commit>.json   cycle benchmarks (one run per machine)
 
-Each file is the JSON a jasmin-nist CI run produced; only its "meta" is read
-here. The index lists every commit that has at least one result, oldest
-first by commit date, with what is available for it, so the dashboard can
-walk the history and fetch only the files it needs.
+Each file is the JSON a jasmin-nist CI run produced. The index lists every
+commit that has at least one result, oldest first by commit date, with the
+run's metadata and a compact summary for the timelines (proof time per
+top-level directory; bench median and quartiles per measurement), so the
+dashboard draws the history from the index alone and fetches a full file
+only for the commits it compares.
 
 Usage:  build_index.py [DATA_DIR] [OUT_JSON]
 """
@@ -18,9 +20,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def load_meta(path):
+def load(path):
     try:
-        return json.loads(path.read_text()).get("meta", {})
+        return json.loads(path.read_text())
     except (OSError, ValueError) as e:
         print(f"skipping {path}: {e}", file=sys.stderr)
         return None
@@ -40,24 +42,37 @@ def main():
         return c
 
     for f in sorted((data / "proofs").glob("*.json")):
-        meta = load_meta(f)
-        if meta is None:
+        d = load(f)
+        if d is None:
             continue
+        meta = d.get("meta", {})
         c = entry(f.stem, meta)
+        groups = {}
+        for x in d.get("files", []):
+            top = x["path"].split("/")[0]
+            groups[top] = round(groups.get(top, 0) + x["seconds"], 1)
         c["proofs"] = {k: meta[k] for k in
-                       ("total_seconds", "files", "machine", "tools", "date")
+                       ("total_seconds", "files", "machine", "tools", "date",
+                        "run_id")
                        if k in meta}
+        c["proofs"]["groups"] = groups
 
     runners = set()
     for f in sorted((data / "bench").glob("*/*.json")):
-        meta = load_meta(f)
-        if meta is None:
+        d = load(f)
+        if d is None:
             continue
+        meta = d.get("meta", {})
         runner = f.parent.name
         runners.add(runner)
         c = entry(f.stem, meta)
-        c.setdefault("bench", {})[runner] = {
-            k: meta[k] for k in ("reps", "iters", "env", "date") if k in meta}
+        b = {k: meta[k] for k in ("reps", "iters", "env", "date", "run_id")
+             if k in meta}
+        # "scheme|backend|operation" -> [median, p25, p75]
+        b["m"] = {f'{r["scheme"]}|{r["backend"]}|{r["operation"]}':
+                  [r["median"], r.get("p25", r["median"]), r.get("p75", r["median"])]
+                  for r in d.get("results", [])}
+        c.setdefault("bench", {})[runner] = b
 
     ordered = sorted(commits.values(),
                      key=lambda c: (c.get("commit_date") or "", c["commit"]))
@@ -66,7 +81,7 @@ def main():
         "bench_runners": sorted(runners),
         "commits": ordered,
     }
-    out.write_text(json.dumps(index, indent=1) + "\n")
+    out.write_text(json.dumps(index, separators=(",", ":")) + "\n")
     print(f"{out}: {len(ordered)} commits, bench runners {sorted(runners)}")
 
 
