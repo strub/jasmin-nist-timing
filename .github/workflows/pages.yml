@@ -31,12 +31,19 @@ jobs:
         with:
           persist-credentials: false
 
+      # Pages serves everything with max-age=600 (not configurable): version
+      # the JS/CSS references with this commit, so once a browser refreshes
+      # index.html it loads matching modules rather than cached old ones.
       - name: Build
         run: |
           mkdir -p _site
           cp -R site/. _site/
           cp -R data _site/data
           python3 tools/build_index.py data _site/index.json
+          v="${GITHUB_SHA::12}"
+          sed -i -E "s#(src|href)=\"([a-z]+)\.(js|css)\"#\1=\"\2.\3?v=$v\"#g" _site/index.html
+          sed -i -E "s#from \"\./([a-z]+)\.js\"#from \"./\1.js?v=$v\"#g" _site/*.js
+          grep -o '[a-z]*\.\(js\|css\)?v=[0-9a-f]*' _site/index.html _site/*.js
 
       - uses: actions/upload-pages-artifact@v5
         with:
