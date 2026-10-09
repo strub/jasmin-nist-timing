@@ -175,3 +175,23 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5px; }
 .ramp { height: 8px; border-radius: 4px; margin: 6px 0 2px;
         background: linear-gradient(90deg, var(--div-neg), var(--div-mid), var(--div-pos)); }
 .ramp-l { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+
+/* commit picker */
+.cpick { position: relative; min-width: 0; }
+.cpick .cur { width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis;
+              white-space: nowrap; padding-right: 26px; position: relative; }
+.cpick .cur::after { content: "▾"; position: absolute; right: 9px; color: var(--muted); }
+.cpick .panel { position: absolute; z-index: 15; left: 0; right: 0; top: calc(100% + 4px);
+                background: var(--surface-1); border: 1px solid var(--ring); border-radius: 8px;
+                box-shadow: 0 6px 20px rgba(0,0,0,.18); padding: 6px; }
+.cpick input { width: 100%; font: inherit; font-size: 13px; color: var(--text-primary);
+               background: var(--page); border: 1px solid var(--ring); border-radius: 6px;
+               padding: 6px 8px; margin-bottom: 4px; }
+.cpick .list { max-height: 300px; overflow-y: auto; }
+.cpick .it { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 10px;
+             padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+.cpick .it .subj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpick .it.on { background: var(--wash); }
+.cpick .it.sel { font-weight: 600; }
+.cpick .more { color: var(--muted); font-size: 12px; padding: 4px 8px 2px; }
+.cpick .more:empty { display: none; }

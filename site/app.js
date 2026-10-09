@@ -95,6 +95,68 @@ function nav(active) {
     a.classList.toggle("on", a.dataset.v === active);
 }
 
+// Commit picker: shows the current commit; opens a search over every
+// recorded commit (hash prefix, subject words, date; all terms must match),
+// newest first, a bounded list so the history can grow without limit.
+function commitPicker(cur, onPick, aria) {
+  const box = el("div", { class: "cpick" });
+  const btn = el("button", { class: "cur", "aria-haspopup": "listbox", "aria-label": aria,
+                             "aria-expanded": "false", text: label(cur) });
+  const panel = el("div", { class: "panel", hidden: "" });
+  const q = el("input", { type: "search", placeholder: "Search hash, subject or date (e.g. ntt 2026-10)",
+                          "aria-label": `${aria}: search`, autocomplete: "off", spellcheck: "false" });
+  const list = el("div", { class: "list", role: "listbox" });
+  const more = el("div", { class: "more" });
+  panel.append(q, list, more);
+  box.append(btn, panel);
+  const SHOW = 30, RECENT = 20;
+  let hits = [], active = 0;
+  const hay = c => `${c.commit} ${day(c.commit_date)} ${c.subject || ""}`.toLowerCase();
+  const refresh = () => {
+    const terms = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const all = COMMITS.slice().reverse().filter(c => terms.every(t => hay(c).includes(t)));
+    hits = all.slice(0, terms.length ? SHOW : RECENT);
+    active = Math.max(0, hits.indexOf(cur));
+    list.replaceChildren(...hits.map((c, i) => {
+      const it = el("div", { class: "it" + (i === active ? " on" : "") + (c === cur ? " sel" : ""),
+                             role: "option", "aria-selected": String(c === cur) },
+        el("span", { class: "mono", text: short(c.commit) }), el("span", { class: "muted", text: day(c.commit_date) }),
+        el("span", { class: "subj", text: c.subject || "" }));
+      it.addEventListener("pointerdown", ev => { ev.preventDefault(); pick(c); });
+      return it;
+    }));
+    const rest = all.length - hits.length;
+    more.textContent = !all.length ? "No match." : rest > 0
+      ? `${rest} more ${terms.length ? "matches: refine the search" : "older commits: search to find them"}` : "";
+  };
+  const mark = () => [...list.children].forEach((e, i) => {
+    e.classList.toggle("on", i === active);
+    if (i === active) e.scrollIntoView({ block: "nearest" });
+  });
+  const open = () => {
+    panel.hidden = false; btn.setAttribute("aria-expanded", "true");
+    q.value = ""; refresh(); q.focus();
+    setTimeout(() => document.addEventListener("pointerdown", outside), 0);
+  };
+  const close = () => {
+    panel.hidden = true; btn.setAttribute("aria-expanded", "false");
+    document.removeEventListener("pointerdown", outside);
+  };
+  const outside = ev => { if (!box.contains(ev.target)) close(); };
+  const pick = c => { close(); if (c && c !== cur) onPick(c); };
+  btn.addEventListener("click", () => panel.hidden ? open() : close());
+  q.addEventListener("input", refresh);
+  q.addEventListener("keydown", ev => {
+    if (ev.key === "ArrowDown") active = Math.min(hits.length - 1, active + 1);
+    else if (ev.key === "ArrowUp") active = Math.max(0, active - 1);
+    else if (ev.key === "Enter") return pick(hits[active]);
+    else if (ev.key === "Escape") { close(); return btn.focus(); }
+    else return;
+    ev.preventDefault(); mark();
+  });
+  return box;
+}
+
 // ---------------------------------------------------------------- timeline
 function timeline(params) {
   nav("trends");
@@ -217,14 +279,9 @@ async function commitView(c, params) {
        el("a", { href: `${REPO}/commit/${c.commit}`, text: "commit" }),
        c.proofs?.run_id ? " · " : null, c.proofs?.run_id ? el("a", { href: `${REPO}/actions/runs/${c.proofs.run_id}`, text: "proofs run" }) : null));
   const bar = el("div", { class: "row" });
-  const sel = el("select", { "aria-label": "commit", style: "flex:1 1 320px" });
-  for (const x of COMMITS.slice().reverse()) {
-    const o = el("option", { value: x.commit, text: label(x) });
-    if (x === c) o.selected = true;
-    sel.append(o);
-  }
-  sel.addEventListener("change", () => go(`#/results/${sel.value}`));
-  bar.append(sel);
+  const cp = commitPicker(c, x => go(`#/results/${x.commit}`), "commit");
+  cp.style.flex = "1 1 320px";
+  bar.append(cp);
   const p = prevOf(c), n = nextOf(c);
   const bp = el("button", { text: "◀ older" }); bp.disabled = !p; bp.addEventListener("click", () => go(`#/results/${p.commit}`));
   const bn = el("button", { text: "newer ▶" }); bn.disabled = !n; bn.addEventListener("click", () => go(`#/results/${n.commit}`));
@@ -317,16 +374,9 @@ async function compareView(a, b, params) {
     el("p", { class: "sub", text: "B against A. Lower is better: ▼ faster, ▲ slower, ≈ within noise " +
       `(proofs: total ±${NOISE.proofsTotal * 100}%, files ±${NOISE.proofsFile.pct * 100}% and ${NOISE.proofsFile.abs} s; ` +
       `bench: quartiles overlap or under ${NOISE.bench * 100}%).` }));
-  const newestFirst = COMMITS.slice().reverse();
   const picker = (lab, cur, other, setTo) => {
     const row = el("div", { class: "pick" });
-    const sel = el("select", { "aria-label": `commit ${lab}` });
-    for (const c of newestFirst) {
-      const o = el("option", { value: c.commit, text: label(c) });
-      if (c === cur) o.selected = true;
-      sel.append(o);
-    }
-    sel.addEventListener("change", () => setTo(resolve(sel.value)));
+    const sel = commitPicker(cur, setTo, `commit ${lab}`);
     const p = prevOf(cur), n = nextOf(cur);
     const bp = el("button", { text: "◀", title: "older", "aria-label": `${lab}: older commit` }); bp.disabled = !p;
     bp.addEventListener("click", () => setTo(p));
