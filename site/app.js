@@ -2,10 +2,11 @@
 // index.json (built by tools/build_index.py) and the per-commit result files.
 //
 // Routes (all in the URL fragment, so every view is a shareable link):
-//   #/                       timelines            (?scheme=ML-KEM-768)
-//   #/commit/<sha>           one commit            (?zoom=dir/sub)
+//   #/  or  #/results/<sha>  one commit's results (latest by default; ?zoom=dir/sub)
+//   #/trends                 timelines             (?scheme=ML-KEM-768)
 //   #/compare/<a>..<b>       b against a           (?zoom=dir/sub)
 //   #/compare/<b>            b against the commit recorded just before it
+// (#/commit/<sha> is kept as an alias of #/results/<sha>.)
 // Commit ids may be abbreviated.
 
 import { el, short, day, dur, minutes, cycles, kcycles, delta, deltaEl } from "./util.js";
@@ -96,7 +97,7 @@ function nav(active) {
 
 // ---------------------------------------------------------------- timeline
 function timeline(params) {
-  nav("timeline");
+  nav("trends");
   view.replaceChildren();
   if (!COMMITS.length) { view.append(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
 
@@ -134,7 +135,7 @@ function timeline(params) {
                                       height: 170, aria: "proof-checking time per directory per commit" });
     const tb = el("tbody");
     for (const [c] of pc.slice().reverse()) {
-      tb.append(el("tr", {}, el("td", {}, el("a", { href: `#/commit/${c.commit}`, class: "mono", text: short(c.commit) })),
+      tb.append(el("tr", {}, el("td", {}, el("a", { href: `#/results/${c.commit}`, class: "mono", text: short(c.commit) })),
         el("td", { text: day(c.commit_date) }), el("td", { class: "num", text: minutes(c.proofs.total_seconds) }),
         ...dirs.map(d => el("td", { class: "num", text: c.proofs.groups?.[d] != null ? minutes(c.proofs.groups[d]) : "" }))));
     }
@@ -207,7 +208,7 @@ function benchCard(runner, params) {
 
 // ---------------------------------------------------------------- commit
 async function commitView(c, params) {
-  nav("commit");
+  nav("results");
   view.replaceChildren();
   const head = el("div", { class: "card" });
   view.append(head);
@@ -222,11 +223,11 @@ async function commitView(c, params) {
     if (x === c) o.selected = true;
     sel.append(o);
   }
-  sel.addEventListener("change", () => go(`#/commit/${sel.value}`));
+  sel.addEventListener("change", () => go(`#/results/${sel.value}`));
   bar.append(sel);
   const p = prevOf(c), n = nextOf(c);
-  const bp = el("button", { text: "◀ older" }); bp.disabled = !p; bp.addEventListener("click", () => go(`#/commit/${p.commit}`));
-  const bn = el("button", { text: "newer ▶" }); bn.disabled = !n; bn.addEventListener("click", () => go(`#/commit/${n.commit}`));
+  const bp = el("button", { text: "◀ older" }); bp.disabled = !p; bp.addEventListener("click", () => go(`#/results/${p.commit}`));
+  const bn = el("button", { text: "newer ▶" }); bn.disabled = !n; bn.addEventListener("click", () => go(`#/results/${n.commit}`));
   const bc = el("button", { text: "compare with previous" }); bc.disabled = !p; bc.addEventListener("click", () => go(`#/compare/${c.commit}`));
   bar.append(bp, bn, bc);
   head.append(bar);
@@ -429,16 +430,19 @@ async function compareView(a, b, params) {
 function route() {
   const { parts, params } = parseHash();
   const [v, arg] = parts;
-  if (v === "commit") {
+  if (!v || v === "results" || v === "commit") {
+    if (!COMMITS.length) return timeline(params);   // shows "no results yet"
     const c = arg ? resolve(arg) : COMMITS[COMMITS.length - 1];
     if (c) return commitView(c, params);
+  } else if (v === "trends") {
+    return timeline(params);
   } else if (v === "compare") {
     if (!COMMITS.length) return timeline(params);
     let a, b;
     if (arg && arg.includes("..")) { const [x, y] = arg.split(".."); a = resolve(x); b = resolve(y); }
     else { b = resolve(arg) || COMMITS[COMMITS.length - 1]; a = prevOf(b) || b; }
     if (a && b) return compareView(a, b, params);
-  } else if (!v) return timeline(params);
+  }
   view.replaceChildren(el("div", { class: "card empty", text: `Unknown or ambiguous link: #/${parts.join("/")}` }));
 }
 
