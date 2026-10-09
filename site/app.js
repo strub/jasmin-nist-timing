@@ -158,15 +158,48 @@ function commitPicker(cur, onPick, aria) {
 }
 
 // ---------------------------------------------------------------- timeline
+// Trends window: the last N recorded commits (?range=30|100|300|all).
+const RANGES = [30, 100, 300];
+const DEFAULT_RANGE = 100;
+function rangeStart(params) {
+  const r = params.get("range");
+  if (r === "all") return 0;
+  const n = RANGES.includes(+r) ? +r : DEFAULT_RANGE;
+  return Math.max(0, COMMITS.length - n);
+}
+
+function rangeBar(params) {
+  const cur = params.get("range") === "all" ? "all"
+            : RANGES.includes(+params.get("range")) ? params.get("range") : String(DEFAULT_RANGE);
+  const opts = RANGES.filter(n => n < COMMITS.length).map(String).concat("all");
+  const bar = el("div", { class: "row card", style: "padding:10px 14px" },
+                 el("span", { class: "muted", text: "Commits shown:" }));
+  for (const o of opts) {
+    const on = o === cur || (o === "all" && +cur >= COMMITS.length);
+    const b = el("button", { class: on ? "on" : "", "aria-pressed": String(on),
+                             text: o === "all" ? `all ${COMMITS.length}` : `last ${o}` });
+    b.addEventListener("click", () => {
+      setParam("range", o);
+      const y = scrollY;               // keep the reader's place
+      timeline(parseHash().params);
+      scrollTo(0, y);
+    });
+    bar.append(b);
+  }
+  return bar;
+}
+
 function timeline(params) {
   nav("trends");
   view.replaceChildren();
   if (!COMMITS.length) { view.append(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
+  if (COMMITS.length > RANGES[0]) view.append(rangeBar(params));
+  const start = rangeStart(params);
 
-  for (const runner of INDEX.bench_runners) view.append(benchCard(runner, params));
+  for (const runner of INDEX.bench_runners) view.append(benchCard(runner, params, start));
 
   // proofs
-  const pc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.proofs);
+  const pc = COMMITS.map((c, i) => [c, i]).filter(([c, i]) => c.proofs && i >= start);
   const card = el("div", { class: "card" });
   view.append(card);
   card.append(el("h2", { text: "Proof checking" }),
@@ -208,8 +241,8 @@ function timeline(params) {
   }
 }
 
-function benchCard(runner, params) {
-  const bc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.bench?.[runner]);
+function benchCard(runner, params, start = 0) {
+  const bc = COMMITS.map((c, i) => [c, i]).filter(([c, i]) => c.bench?.[runner] && i >= start);
   const card = el("div", { class: "card" });
   card.append(el("h2", { text: `Benchmarks · ${runner}` }),
               el("p", { class: "sub", text: "Median cycles per operation (median over the passes); the band spans the " +
@@ -223,7 +256,7 @@ function benchCard(runner, params) {
   for (const s of schemes) {
     const b = el("button", { class: s === scheme ? "on" : "", text: s, "aria-pressed": String(s === scheme) });
     // rebuild this card only: re-rendering the page would scroll to the top
-    b.addEventListener("click", () => { setParam("scheme", s); card.replaceWith(benchCard(runner, parseHash().params)); });
+    b.addEventListener("click", () => { setParam("scheme", s); card.replaceWith(benchCard(runner, parseHash().params, start)); });
     bar.append(b);
   }
   card.append(bar);

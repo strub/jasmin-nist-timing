@@ -33,7 +33,14 @@ export function lineChart(host, series, opts = {}) {
   host.appendChild(wrap);
   const draw = () => render(wrap, series, opts);
   draw();
-  new ResizeObserver(() => draw()).observe(wrap);
+  // redraw on width changes only, once per frame: a redraw may itself shift
+  // the layout (e.g. a scrollbar appearing), which must not loop
+  let lastW = wrap.clientWidth, queued = false;
+  new ResizeObserver(() => {
+    if (queued || wrap.clientWidth === lastW) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; lastW = wrap.clientWidth; draw(); });
+  }).observe(wrap);
   return { redraw: draw };
 }
 
@@ -113,7 +120,8 @@ function render(wrap, series, opts) {
   // environment changes
   const env = svgEl("g", { class: "env" });
   for (const m of opts.envMarks || []) {
-    if (m.x < x0 || m.x > x1) continue;
+    // a change at the first visible commit came from outside the window
+    if (m.x <= x0 || m.x > x1) continue;
     const X = px(m.x - 0.5);
     env.appendChild(svgEl("line", { x1: X, x2: X, y1: M.t - 4, y2: H - M.b }));
     const t = svgEl("text", { x: X + 3, y: M.t + 4 });
