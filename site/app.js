@@ -322,9 +322,12 @@ async function commitView(c, params) {
   bar.append(bp, bn, bc);
   head.append(bar);
 
+  const missing = (title, what) => view.append(el("div", { class: "card" }, el("h2", { text: title }),
+    el("div", { class: "empty", text: `No ${what} recorded for this commit: its CI run may still be in ` +
+      "progress, may have failed, or did not run for this commit." })));
   for (const runner of INDEX.bench_runners) {
     const b = c.bench?.[runner];
-    if (!b) continue;
+    if (!b) { missing(`Benchmarks · ${runner}`, "benchmarks"); continue; }
     const card = el("div", { class: "card" });
     view.append(card);
     card.append(el("h2", { text: `Benchmarks · ${runner}` }),
@@ -332,7 +335,8 @@ async function commitView(c, params) {
         Object.entries(b.env || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") }));
     card.append(benchBars(runner, b.m));
   }
-  if (c.proofs) {
+  if (!c.proofs) missing("Proof checking", "proof timings");
+  else {
     const card = el("div", { class: "card" });
     view.append(card);
     const m = c.proofs.machine || {}, t = c.proofs.tools || {};
