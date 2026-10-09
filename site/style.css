@@ -105,6 +105,9 @@ select { max-width: 100%; }
 .chart .env text { fill: var(--muted); font-size: 10.5px; }
 .chart .xhair { stroke: var(--text-secondary); stroke-width: 1; }
 .chart .hit { fill: transparent; cursor: pointer; }
+.chart .whisker { stroke: var(--text-secondary); stroke-width: 1.5; fill: none; }
+.chart rect.hit:focus { outline: none; }
+.chart rect.hit:focus-visible { stroke: var(--text-secondary); stroke-width: 1; }
 .legend { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 12.5px; margin: 4px 0 6px; }
 .legend .item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
                 color: var(--text-primary); user-select: none; padding: 2px 4px; border-radius: 4px; }

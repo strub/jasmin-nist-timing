@@ -10,7 +10,7 @@
 // Commit ids may be abbreviated.
 
 import { el, short, day, dur, minutes, cycles, kcycles, delta, deltaEl } from "./util.js";
-import { lineChart, legend } from "./chart.js";
+import { lineChart, legend, barsH } from "./chart.js";
 import { sunburst } from "./sunburst.js";
 
 const REPO = "https://github.com/strub/jasmin-nist";
@@ -330,7 +330,7 @@ async function commitView(c, params) {
     card.append(el("h2", { text: `Benchmarks · ${runner}` }),
       el("p", { class: "sub", text: `Median cycles, ${b.reps || 1} passes × ${b.iters || "?"} iterations; ± half the passes' interquartile range. ` +
         Object.entries(b.env || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") }));
-    card.append(benchTables(b.m, null));
+    card.append(benchBars(runner, b.m));
   }
   if (c.proofs) {
     const card = el("div", { class: "card" });
@@ -364,9 +364,9 @@ function fileTable(rows, head, summary, limit) {
 }
 
 // bench tables per scheme; with `base`, a comparison (base -> m)
-function benchTables(m, base) {
+function benchTables(m, base, { schemes: only = null, heading = true } = {}) {
   const wrap = el("div");
-  const schemes = [...new Set(Object.keys(m).map(k => k.split("|")[0]))].sort();
+  const schemes = only || [...new Set(Object.keys(m).map(k => k.split("|")[0]))].sort();
   for (const s of schemes) {
     const ks = Object.keys(m).filter(k => k.startsWith(s + "|"));
     const backends = [...new Set(ks.map(k => k.split("|")[1]))].sort(byBackend);
@@ -391,8 +391,56 @@ function benchTables(m, base) {
       }
       tb.append(el("tr", {}, el("td", { text: b }), ...cells));
     }
-    wrap.append(el("h3", { text: s }), el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {},
+    if (heading) wrap.append(el("h3", { text: s }));
+    wrap.append(el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {},
       el("th", { text: "backend" }), ...ops.map(o => el("th", { class: "num", text: o })))), tb)));
+  }
+  return wrap;
+}
+
+// One commit's benchmarks: per scheme, one bar chart per operation (a bar
+// per backend, zero baseline, whisker = the passes' quartiles, label =
+// cycles and ratio to jasmin), and the scheme's table folded underneath.
+function benchBars(runner, m) {
+  const wrap = el("div");
+  // schemes with a jasmin implementation first (the one under study)
+  const hasJasmin = s => Object.keys(m).some(k => k.startsWith(`${s}|jasmin|`));
+  const schemes = [...new Set(Object.keys(m).map(k => k.split("|")[0]))]
+    .sort((a, b) => (hasJasmin(b) - hasJasmin(a)) || a.localeCompare(b));
+  const backends = [...new Set(Object.keys(m).map(k => k.split("|")[1]))].sort(byBackend);
+  if (!benchHidden.has(runner)) benchHidden.set(runner, new Set(["pqcrystals-ref"]));
+  const hid = benchHidden.get(runner);
+  const shared = backends.map(b => {
+    const ser = { key: b, label: b, color: backendColor(b) };
+    Object.defineProperty(ser, "hidden", { get: () => hid.has(b), set: v => { if (v) hid.add(b); else hid.delete(b); } });
+    return ser;
+  });
+  const charts = [];
+  legend(wrap, shared, () => charts.forEach(c => c.redraw()));
+  for (const s of schemes) {
+    const ks = Object.keys(m).filter(k => k.startsWith(s + "|"));
+    const ops0 = [...new Set(ks.map(k => k.split("|")[2]))];
+    const ops = (ops0.includes("keypair") ? OPS.KEM : OPS.SIG).filter(o => ops0.includes(o));
+    wrap.append(el("h3", { text: s }));
+    const grid = el("div", { class: "grid3" });
+    wrap.append(grid);
+    for (const op of ops) {
+      const cell = el("div");
+      grid.append(cell);
+      cell.append(el("div", { class: "muted", style: "font-size:12px;margin:2px 0 2px", text: op }));
+      const jas = m[`${s}|jasmin|${op}`];
+      const rows = shared.filter(b => m[`${s}|${b.key}|${op}`]).map(b => {
+        const [v, lo, hi] = m[`${s}|${b.key}|${op}`];
+        const r = { key: b.key, label: b.label, color: b.color, value: v, lo, hi,
+                    note: jas && b.key !== "jasmin" ? `${(v / jas[0]).toFixed(2)}× jasmin` : null };
+        Object.defineProperty(r, "hidden", { get: () => b.hidden });
+        return r;
+      });
+      charts.push(barsH(cell, rows, { format: kcycles, title: `${s} ${op} · median cycles`,
+                                      aria: `${s} ${op}: median cycles per backend` }));
+    }
+    wrap.append(el("details", {}, el("summary", { text: `Table view: ${s}` }),
+                   benchTables(m, null, { schemes: [s], heading: false })));
   }
   return wrap;
 }
