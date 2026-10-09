@@ -207,7 +207,7 @@ function benchCard(runner, params) {
 
 // ---------------------------------------------------------------- commit
 async function commitView(c, params) {
-  nav("");
+  nav("commit");
   view.replaceChildren();
   const head = el("div", { class: "card" });
   view.append(head);
@@ -216,6 +216,14 @@ async function commitView(c, params) {
        el("a", { href: `${REPO}/commit/${c.commit}`, text: "commit" }),
        c.proofs?.run_id ? " · " : null, c.proofs?.run_id ? el("a", { href: `${REPO}/actions/runs/${c.proofs.run_id}`, text: "proofs run" }) : null));
   const bar = el("div", { class: "row" });
+  const sel = el("select", { "aria-label": "commit", style: "flex:1 1 320px" });
+  for (const x of COMMITS.slice().reverse()) {
+    const o = el("option", { value: x.commit, text: label(x) });
+    if (x === c) o.selected = true;
+    sel.append(o);
+  }
+  sel.addEventListener("change", () => go(`#/commit/${sel.value}`));
+  bar.append(sel);
   const p = prevOf(c), n = nextOf(c);
   const bp = el("button", { text: "◀ older" }); bp.disabled = !p; bp.addEventListener("click", () => go(`#/commit/${p.commit}`));
   const bn = el("button", { text: "newer ▶" }); bn.disabled = !n; bn.addEventListener("click", () => go(`#/commit/${n.commit}`));
@@ -223,6 +231,16 @@ async function commitView(c, params) {
   bar.append(bp, bn, bc);
   head.append(bar);
 
+  for (const runner of INDEX.bench_runners) {
+    const b = c.bench?.[runner];
+    if (!b) continue;
+    const card = el("div", { class: "card" });
+    view.append(card);
+    card.append(el("h2", { text: `Benchmarks · ${runner}` }),
+      el("p", { class: "sub", text: `Median cycles, ${b.reps || 1} passes × ${b.iters || "?"} iterations; ± half the passes' interquartile range. ` +
+        Object.entries(b.env || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") }));
+    card.append(benchTables(b.m, null));
+  }
   if (c.proofs) {
     const card = el("div", { class: "card" });
     view.append(card);
@@ -239,16 +257,6 @@ async function commitView(c, params) {
       card.append(fileTable(rows.map(f => [f.path, dur(f.seconds), `${(100 * f.seconds / c.proofs.total_seconds).toFixed(2)}%`]),
                             ["file", "time", "share"], "All files as a table"));
     } catch (e) { host.append(el("div", { class: "empty", text: String(e) })); }
-  }
-  for (const runner of INDEX.bench_runners) {
-    const b = c.bench?.[runner];
-    if (!b) continue;
-    const card = el("div", { class: "card" });
-    view.append(card);
-    card.append(el("h2", { text: `Benchmarks · ${runner}` }),
-      el("p", { class: "sub", text: `Median cycles, ${b.reps || 1} passes × ${b.iters || "?"} iterations; ± half the passes' interquartile range. ` +
-        Object.entries(b.env || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") }));
-    card.append(benchTables(b.m, null));
   }
 }
 
@@ -346,6 +354,27 @@ async function compareView(a, b, params) {
       el("ul", {}, ...diffs.map(d => el("li", {}, el("span", { text: `${d.key}: ` }), el("span", { class: "mono", text: `${d.a} → ${d.b}` })))));
   };
 
+  // bench
+  for (const runner of INDEX.bench_runners) {
+    const card = el("div", { class: "card" });
+    view.append(card);
+    card.append(el("h2", { text: `Benchmarks · ${runner}` }));
+    const ba = a.bench?.[runner], bb = b.bench?.[runner];
+    if (!ba || !bb) { card.append(el("div", { class: "empty", text: `No benchmark for ${!ba ? "A" : "B"} on this machine.` })); continue; }
+    const n = envNotice(envDiff(benchEnv(a, runner), benchEnv(b, runner)), "Bench");
+    if (n) card.append(n);
+    let better = 0, worse = 0;
+    for (const k of Object.keys(bb.m)) {
+      const x = ba.m[k], y = bb.m[k];
+      if (!x) continue;
+      const sig = (y[1] > x[2] || y[2] < x[1]) && Math.abs(y[0] - x[0]) / x[0] >= NOISE.bench;
+      if (sig) y[0] < x[0] ? better++ : worse++;
+    }
+    card.append(el("p", { class: "sub", text: `${better} faster, ${worse} slower, ${Object.keys(bb.m).length - better - worse} unchanged ` +
+      `(of ${Object.keys(bb.m).length} measurements). Cells: A → B median cycles.` }));
+    card.append(benchTables(bb.m, ba.m));
+  }
+
   // proofs
   const card = el("div", { class: "card" });
   view.append(card);
@@ -394,27 +423,6 @@ async function compareView(a, b, params) {
         fileTable(rows.map(r => r.row), ["file", "A", "B", "change"], "All files, largest absolute change first"));
     } catch (e) { host.append(el("div", { class: "empty", text: String(e) })); }
   }
-
-  // bench
-  for (const runner of INDEX.bench_runners) {
-    const card = el("div", { class: "card" });
-    view.append(card);
-    card.append(el("h2", { text: `Benchmarks · ${runner}` }));
-    const ba = a.bench?.[runner], bb = b.bench?.[runner];
-    if (!ba || !bb) { card.append(el("div", { class: "empty", text: `No benchmark for ${!ba ? "A" : "B"} on this machine.` })); continue; }
-    const n = envNotice(envDiff(benchEnv(a, runner), benchEnv(b, runner)), "Bench");
-    if (n) card.append(n);
-    let better = 0, worse = 0;
-    for (const k of Object.keys(bb.m)) {
-      const x = ba.m[k], y = bb.m[k];
-      if (!x) continue;
-      const sig = (y[1] > x[2] || y[2] < x[1]) && Math.abs(y[0] - x[0]) / x[0] >= NOISE.bench;
-      if (sig) y[0] < x[0] ? better++ : worse++;
-    }
-    card.append(el("p", { class: "sub", text: `${better} faster, ${worse} slower, ${Object.keys(bb.m).length - better - worse} unchanged ` +
-      `(of ${Object.keys(bb.m).length} measurements). Cells: A → B median cycles.` }));
-    card.append(benchTables(bb.m, ba.m));
-  }
 }
 
 // ---------------------------------------------------------------- router
@@ -422,7 +430,7 @@ function route() {
   const { parts, params } = parseHash();
   const [v, arg] = parts;
   if (v === "commit") {
-    const c = resolve(arg);
+    const c = arg ? resolve(arg) : COMMITS[COMMITS.length - 1];
     if (c) return commitView(c, params);
   } else if (v === "compare") {
     if (!COMMITS.length) return timeline(params);
