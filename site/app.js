@@ -464,12 +464,12 @@ function benchBars(runner, m) {
     const ops0 = [...new Set(ks.map(k => k.split("|")[2]))];
     const ops = (ops0.includes("keypair") ? OPS.KEM : OPS.SIG).filter(o => ops0.includes(o));
     wrap.append(el("h3", { text: s }));
-    const grid = el("div", { class: "grid3" });
+    const grid = el("div", { class: "grid3 ops" });
     wrap.append(grid);
-    for (const op of ops) {
-      const cell = el("div");
+    for (const [oi, op] of ops.entries()) {
+      const cell = el("div", { class: "op" });
       grid.append(cell);
-      cell.append(el("div", { class: "muted", style: "font-size:12px;margin:2px 0 2px", text: op }));
+      cell.append(el("div", { class: "opname", text: op }));
       const jas = m[`${s}|jasmin|${op}`];
       const rows = shared.filter(b => m[`${s}|${b.key}|${op}`]).map(b => {
         const [v, lo, hi] = m[`${s}|${b.key}|${op}`];
@@ -479,6 +479,7 @@ function benchBars(runner, m) {
         return r;
       });
       charts.push(barsH(cell, rows, { format: kcycles, tickFormat: kround, title: `${s} ${op} · median cycles`,
+                                      labels: oi === 0,
                                       aria: `${s} ${op}: median cycles per backend` }));
     }
     wrap.append(el("details", {}, el("summary", { text: `Table view: ${s}` }),

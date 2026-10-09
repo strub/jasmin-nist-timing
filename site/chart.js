@@ -236,7 +236,9 @@ export { setText };
 // rows: [{ key, label, color, value, lo?, hi?, note? }]
 //   lo/hi: spread, shown in the tooltip; note: short secondary text after
 //   the value label (muted)
-// opts: { format(v), tickFormat(v), aria, title }
+// opts: { format(v), tickFormat(v), aria, title,
+//         labels: false -> omit the row names when the charts sit side by side
+//                          (they repeat those of the first chart in the row) }
 export function barsH(host, rows, opts = {}) {
   const wrap = el("div", { class: "chart" });
   host.appendChild(wrap);
@@ -257,7 +259,9 @@ function renderBars(wrap, rows, opts) {
   const BAR = 18, GAP = 10;
   const fmt = opts.format || String;
   wrap.innerHTML = "";
-  const labW = Math.min(104, W * 0.32);
+  const sideBySide = matchMedia("(min-width: 861px)").matches;   // .grid3 has 3 columns
+  const showLabels = opts.labels !== false || !sideBySide;
+  const labW = showLabels ? Math.min(104, W * 0.32) : 2;
   // values and notes in aligned columns right of the plot, clear of the grid
   const VAL = 46, NOTE = vis.some(r => r.note) ? 42 : 0, COLGAP = 10;
   const M = { l: labW, r: COLGAP + VAL + (NOTE ? 6 + NOTE : 0), t: 4, b: 20 };
@@ -286,10 +290,12 @@ function renderBars(wrap, rows, opts) {
   svg.appendChild(g);
   vis.forEach((r, i) => {
     const y = M.t + i * (BAR + GAP);
-    const name = svgEl("text", { x: M.l - 8, y: y + BAR / 2, "text-anchor": "end",
-                                 "dominant-baseline": "middle", class: "end" });
-    name.textContent = r.label;
-    svg.appendChild(name);
+    if (showLabels) {
+      const name = svgEl("text", { x: M.l - 8, y: y + BAR / 2, "text-anchor": "end",
+                                   "dominant-baseline": "middle", class: "end" });
+      name.textContent = r.label;
+      svg.appendChild(name);
+    }
     // 4px rounded data end, square at the baseline
     const x0 = px(0), x1 = Math.max(x0 + 1, px(r.value)), rad = Math.min(4, (x1 - x0) / 2);
     svg.appendChild(svgEl("path", { fill: r.color, class: "bar",
