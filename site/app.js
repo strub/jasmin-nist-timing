@@ -33,6 +33,13 @@ const backendColor = b => `var(--s${BACKEND_SLOT[b] || 5})`;
 const BACKEND_ORDER = ["jasmin", "mlkem-native", "mldsa-native", "pqcrystals", "pqcrystals-ref"];
 const byBackend = (a, b) => (BACKEND_ORDER.indexOf(a) + 1 || 99) - (BACKEND_ORDER.indexOf(b) + 1 || 99) || a.localeCompare(b);
 const OPS = { KEM: ["keypair", "encaps", "decaps"], SIG: ["keygen", "sign", "verify"] };
+// Schemes grouped by family (ML-KEM, then ML-DSA), then by parameter set.
+const FAMILY = ["ML-KEM", "ML-DSA"];
+function bySchemeOrder(a, b) {
+  const fam = s => { const i = FAMILY.findIndex(f => s.startsWith(f + "-")); return i < 0 ? FAMILY.length : i; };
+  const num = s => parseInt(s.replace(/^.*-/, ""), 10) || 0;
+  return fam(a) - fam(b) || num(a) - num(b) || a.localeCompare(b);
+}
 
 let INDEX = null, COMMITS = [], POS = new Map();
 const cache = new Map();
@@ -249,7 +256,7 @@ function benchCard(runner, params, start = 0) {
                 "passes' quartiles. Click a legend entry to hide a backend; click a commit to compare it with the previous one." }));
   if (!bc.length) { card.append(el("div", { class: "empty", text: "No benchmarks yet." })); return card; }
   const keys = new Set(bc.flatMap(([c]) => Object.keys(c.bench[runner].m)));
-  const schemes = [...new Set([...keys].map(k => k.split("|")[0]))].sort();
+  const schemes = [...new Set([...keys].map(k => k.split("|")[0]))].sort(bySchemeOrder);
   const withJasmin = schemes.filter(s => keys.has(`${s}|jasmin|keypair`) || keys.has(`${s}|jasmin|keygen`));
   const scheme = schemes.includes(params.get("scheme")) ? params.get("scheme") : (withJasmin[0] || schemes[0]);
   const bar = el("div", { class: "row", style: "margin-bottom:6px" });
@@ -370,7 +377,7 @@ function fileTable(rows, head, summary, limit) {
 // bench tables per scheme; with `base`, a comparison (base -> m)
 function benchTables(m, base, { schemes: only = null, heading = true } = {}) {
   const wrap = el("div");
-  const schemes = only || [...new Set(Object.keys(m).map(k => k.split("|")[0]))].sort();
+  const schemes = only || [...new Set(Object.keys(m).map(k => k.split("|")[0]))].sort(bySchemeOrder);
   for (const s of schemes) {
     const ks = Object.keys(m).filter(k => k.startsWith(s + "|"));
     const backends = [...new Set(ks.map(k => k.split("|")[1]))].sort(byBackend);
@@ -407,10 +414,7 @@ function benchTables(m, base, { schemes: only = null, heading = true } = {}) {
 // cycles and ratio to jasmin), and the scheme's table folded underneath.
 function benchBars(runner, m) {
   const wrap = el("div");
-  // schemes with a jasmin implementation first (the one under study)
-  const hasJasmin = s => Object.keys(m).some(k => k.startsWith(`${s}|jasmin|`));
-  const schemes = [...new Set(Object.keys(m).map(k => k.split("|")[0]))]
-    .sort((a, b) => (hasJasmin(b) - hasJasmin(a)) || a.localeCompare(b));
+  const schemes = [...new Set(Object.keys(m).map(k => k.split("|")[0]))].sort(bySchemeOrder);
   const backends = [...new Set(Object.keys(m).map(k => k.split("|")[1]))].sort(byBackend);
   if (!benchHidden.has(runner)) benchHidden.set(runner, new Set(["pqcrystals-ref"]));
   const hid = benchHidden.get(runner);
