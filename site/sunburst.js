@@ -59,10 +59,17 @@ function divColor(pct) {
 export function sunburst(host, files, opts = {}) {
   const root = build(files);
   const baseMap = opts.base ? new Map(opts.base.map(f => [f.path, f.seconds])) : null;
-  // base seconds per node (files present in both runs only, so a renamed or
-  // new file reads as such rather than as a speed change)
-  const baseOf = n => n.children ? n.children.reduce((a, c) => a + baseOf(c), 0)
-                                 : (baseMap.has(n.path) ? baseMap.get(n.path) : n.seconds);
+  // Change of a slice = over its files present in both runs only: a new file
+  // (or a rename) is not a speed change. New files are hatched instead, and
+  // files gone since the base run are listed beside the chart.
+  const common = n => n.children
+    ? n.children.reduce((acc, c) => { const x = common(c); return [acc[0] + x[0], acc[1] + x[1]]; }, [0, 0])
+    : (baseMap.has(n.path) ? [baseMap.get(n.path), n.seconds] : [0, 0]);
+  const newSec = n => n.children ? n.children.reduce((a, c) => a + newSec(c), 0)
+                                 : (baseMap.has(n.path) ? 0 : n.seconds);
+  const isNew = n => newSec(n) === n.seconds && n.seconds > 0;
+  const removed = baseMap ? opts.base.filter(f => !files.some(g => g.path === f.path))
+                                     .sort((x, y) => y.seconds - x.seconds) : [];
   const families = root.children.map(c => c.name);
   const famColor = name => css(SLOTS[families.indexOf(name) % SLOTS.length]);
   const surface = () => css("--surface-1");
@@ -74,6 +81,7 @@ export function sunburst(host, files, opts = {}) {
   host.append(crumbs, box);
   box.append(plot, side);
 
+  const hatchId = `hatch${Math.random().toString(36).slice(2, 8)}`;
   let zoom = root;
   if (opts.zoom) {
     let n = root;
@@ -104,29 +112,46 @@ export function sunburst(host, files, opts = {}) {
     RING = Math.min(64, (CX - R0 - 2) / Math.max(1, depthBelow(zoom)));
     const svg = svgEl("svg", { viewBox: `0 0 ${W} ${W}`, role: "img",
                                "aria-label": "sunburst of proof-checking time" });
+    if (baseMap) {   // hatching for files new in B: tone-on-tone 45° lines
+      const pat = svgEl("pattern", { id: hatchId, patternUnits: "userSpaceOnUse", width: 6, height: 6,
+                                     patternTransform: "rotate(45)" });
+      pat.append(svgEl("rect", { width: 6, height: 6, fill: css("--div-mid") }),
+                 svgEl("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: css("--muted"), "stroke-width": 2 }));
+      const defs = svgEl("defs");
+      defs.append(pat);
+      svg.append(defs);
+    }
     const labels = [];
     let lid = 0;
     const total = root.seconds;
     const draw = (node, a0, a1, ring) => {
       if (node !== zoom) {
         const r0 = R0 + ring * RING, r1 = r0 + RING - 2;
-        let fill;
+        let fill, ink;
         if (baseMap) {
-          const b = baseOf(node);
-          fill = divColor(b ? (node.seconds - b) / b : 0);
+          const [ca, cb] = common(node);
+          fill = divColor(ca ? (cb - ca) / ca : 0);
+          ink = fill;
+          if (isNew(node)) { ink = css("--div-mid"); fill = `url(#${hatchId})`; }
         } else {
           const rel = node.depth - zoom.depth, t = Math.min(0.62, 0.16 * (rel - 1));
           fill = mix(famColor(node.path.split("/")[0]), surface(),
                      node.children ? t : Math.min(0.7, t + 0.10));
+          ink = fill;
         }
         const path = svgEl("path", { d: arcPath(a0, a1, r0, r1), fill, class: "arc",
                                      stroke: surface(), "stroke-width": 1.5 });
         path.addEventListener("pointermove", ev => {
           const rows = [{ value: dur(node.seconds), label: `${(100 * node.seconds / total).toFixed(1)}% of total` }];
           if (baseMap) {
-            const b = baseOf(node), pct = b ? (node.seconds - b) / b : 0;
-            rows.push({ value: `${pct > 0 ? "+" : pct < 0 ? "−" : "±"}${Math.abs(100 * pct).toFixed(1)}%`,
-                        label: `vs ${dur(b)} in A` });
+            const [ca, cb] = common(node), nw = newSec(node);
+            if (isNew(node)) rows.push({ value: "new", label: "not in A" });
+            else {
+              const pct = ca ? (cb - ca) / ca : 0;
+              rows.push({ value: `${pct > 0 ? "+" : pct < 0 ? "−" : "±"}${Math.abs(100 * pct).toFixed(1)}%`,
+                          label: node.children ? `on files in both (${dur(ca)} in A)` : `vs ${dur(ca)} in A` });
+              if (nw > 0) rows.push({ value: dur(nw), label: "in files new in B" });
+            }
           }
           tip(node.path + (node.children ? "/" : ""), rows, ev.clientX, ev.clientY);
         });
@@ -141,7 +166,7 @@ export function sunburst(host, files, opts = {}) {
           svg.appendChild(svgEl("path", { id, fill: "none",
             d: `M${xs},${ys}A${rm},${rm} 0 ${span > Math.PI ? 1 : 0} 1 ${xe},${ye}` }));
           const txt = svgEl("text", { class: "albl" });
-          txt.style.fill = inkFor(fill);
+          txt.style.fill = inkFor(ink);
           const tp = svgEl("textPath", { href: "#" + id, startOffset: "50%", "text-anchor": "middle" });
           tp.textContent = node.name;
           txt.appendChild(tp);
@@ -202,7 +227,21 @@ export function sunburst(host, files, opts = {}) {
       side.append(el("div", { class: "sub", text: "Color: change of each slice against A" }),
                   el("div", { class: "ramp" }),
                   el("div", { class: "ramp-l" }, el("span", { text: `−${RANGE * 100}% faster` }),
-                     el("span", { text: "0" }), el("span", { text: `+${RANGE * 100}% slower` })));
+                     el("span", { text: "0" }), el("span", { text: `+${RANGE * 100}% slower` })),
+                  el("div", { class: "legend", style: "margin-top:6px" },
+                     el("span", { class: "item", style: "cursor:default" }, el("span", { class: "sw hatch" }),
+                        "new in B (not compared)")));
+      if (removed.length) {
+        const SHOWN = 8;
+        const tot = removed.reduce((a, f) => a + f.seconds, 0);
+        const ul = el("ul", { class: "removed" });
+        for (const f of removed.slice(0, SHOWN))
+          ul.append(el("li", {}, el("span", { class: "mono", text: f.path }), el("span", { class: "muted num", text: dur(f.seconds) })));
+        side.append(el("div", { class: "sub", style: "margin:10px 0 2px",
+                                text: `Removed since A: ${removed.length} file${removed.length > 1 ? "s" : ""}, ${dur(tot)} in A` }), ul);
+        if (removed.length > SHOWN) side.append(el("div", { class: "muted", style: "font-size:12px",
+                                                            text: `… and ${removed.length - SHOWN} more (see the file table)` }));
+      }
     }
     const lg = el("div", { class: "legend", style: "flex-direction:column;gap:4px" });
     for (const f of root.children) {

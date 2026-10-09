@@ -523,30 +523,49 @@ async function compareView(a, b, params) {
   else {
     const n = envNotice(envDiff(proofsEnv(a), proofsEnv(b)), "Proofs");
     if (n) card.append(n);
-    const ta = a.proofs.total_seconds, tbv = b.proofs.total_seconds;
-    const dt = delta(ta, tbv, Math.abs(tbv - ta) / ta >= NOISE.proofsTotal);
-    card.append(el("div", { class: "tiles", style: "margin-top:10px" },
-      el("div", { class: "tile" }, el("div", { class: "k", text: "A total" }), el("div", { class: "v", text: dur(ta) }),
-         el("div", { class: "s muted", text: `${a.proofs.files} files` })),
-      el("div", { class: "tile" }, el("div", { class: "k", text: "B total" }), el("div", { class: "v", text: dur(tbv) }),
-         el("div", { class: "s muted", text: `${b.proofs.files} files` })),
-      el("div", { class: "tile" }, el("div", { class: "k", text: "change" }), el("div", { class: "v" }, deltaEl(dt)),
-         el("div", { class: "s muted", text: `${tbv >= ta ? "+" : "−"}${dur(Math.abs(tbv - ta))}` }))));
-    const dirs = [...new Set([...Object.keys(a.proofs.groups || {}), ...Object.keys(b.proofs.groups || {})])].sort();
-    const drows = dirs.map(d => {
-      const x = a.proofs.groups?.[d], y = b.proofs.groups?.[d];
-      if (x == null || y == null) return [d, x == null ? "—" : dur(x), y == null ? "—" : dur(y), el("span", { class: "muted", text: x == null ? "new" : "removed" })];
-      const sig = Math.abs(y - x) >= NOISE.proofsDir.abs && Math.abs(y - x) / x >= NOISE.proofsDir.pct;
-      return [d, dur(x), dur(y), deltaEl(delta(x, y, sig))];
-    });
-    card.append(el("h3", { text: "By top-level directory" }), fileTable(drows, ["directory", "A", "B", "change"]));
-    const host = el("div");
-    card.append(el("h3", { text: "B by file, colored by change against A" }), host);
-    try {
-      const [fa, fb] = await Promise.all([proofsFile(a.commit), proofsFile(b.commit)]);
-      sunburst(host, fb.files, { base: fa.files, zoom: params.get("zoom"), onZoom: z => setParam("zoom", z) });
+    let fa = null, fb = null;
+    try { [fa, fb] = await Promise.all([proofsFile(a.commit), proofsFile(b.commit)]); }
+    catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
+    if (fa && fb) {
       const am = new Map(fa.files.map(f => [f.path, f.seconds]));
       const bm = new Map(fb.files.map(f => [f.path, f.seconds]));
+      // A change splits into: files in both runs (the speed change, which
+      // gets the verdict), files new in B, and files removed since A.
+      const split = (keep = () => true) => {
+        const r = { ta: 0, tb: 0, ca: 0, cb: 0, added: 0, nAdded: 0, removed: 0, nRemoved: 0 };
+        for (const [p, x] of am) if (keep(p)) {
+          r.ta += x;
+          if (bm.has(p)) { r.ca += x; r.cb += bm.get(p); } else { r.removed += x; r.nRemoved++; }
+        }
+        for (const [p, y] of bm) if (keep(p)) { r.tb += y; if (!am.has(p)) { r.added += y; r.nAdded++; } }
+        return r;
+      };
+      const signed = v => `${v >= 0 ? "+" : "−"}${dur(Math.abs(v))}`;
+      const files = n => `${n} file${n > 1 ? "s" : ""}`;
+      const churn = r => [r.nAdded ? `+${dur(r.added)} new (${files(r.nAdded)})` : null,
+                          r.nRemoved ? `−${dur(r.removed)} removed (${files(r.nRemoved)})` : null].filter(Boolean).join(" · ");
+      const T = split();
+      const dt = delta(T.ca, T.cb, T.ca > 0 && Math.abs(T.cb - T.ca) / T.ca >= NOISE.proofsTotal);
+      card.append(el("div", { class: "tiles", style: "margin-top:10px" },
+        el("div", { class: "tile" }, el("div", { class: "k", text: "A total" }), el("div", { class: "v", text: dur(T.ta) }),
+           el("div", { class: "s muted", text: files(am.size) })),
+        el("div", { class: "tile" }, el("div", { class: "k", text: "B total" }), el("div", { class: "v", text: dur(T.tb) }),
+           el("div", { class: "s muted", text: `${files(bm.size)} · ${signed(T.tb - T.ta)}` })),
+        el("div", { class: "tile" }, el("div", { class: "k", text: "change on files in both" }), el("div", { class: "v" }, deltaEl(dt)),
+           el("div", { class: "s muted", text: [signed(T.cb - T.ca), churn(T)].filter(Boolean).join(" · ") }))));
+      const dirs = [...new Set([...am.keys(), ...bm.keys()].map(p => p.split("/")[0]))].sort();
+      const drows = dirs.map(d => {
+        const r = split(p => p.split("/")[0] === d);
+        const verdict = r.ca > 0
+          ? deltaEl(delta(r.ca, r.cb, Math.abs(r.cb - r.ca) >= NOISE.proofsDir.abs && Math.abs(r.cb - r.ca) / r.ca >= NOISE.proofsDir.pct))
+          : el("span", { class: "muted", text: r.nAdded ? "new" : "removed" });
+        return [d, r.ta ? dur(r.ta) : "—", r.tb ? dur(r.tb) : "—", verdict, churn(r) || "—"];
+      });
+      card.append(el("h3", { text: "By top-level directory" }),
+                  fileTable(drows, ["directory", "A", "B", "change on files in both", "new / removed"]));
+      const host = el("div");
+      card.append(el("h3", { text: "B by file, colored by change against A" }), host);
+      sunburst(host, fb.files, { base: fa.files, zoom: params.get("zoom"), onZoom: z => setParam("zoom", z) });
       const paths = [...new Set([...am.keys(), ...bm.keys()])];
       const rows = paths.map(p => {
         const x = am.get(p), y = bm.get(p);
@@ -561,7 +580,7 @@ async function compareView(a, b, params) {
       card.append(el("h3", { text: `Files with a change beyond noise (${changed.length} of ${rows.length})` }),
         changed.length ? fileTable(changed.map(r => r.row), ["file", "A", "B", "change"]) : el("div", { class: "muted", text: "None." }),
         fileTable(rows.map(r => r.row), ["file", "A", "B", "change"], "All files, largest absolute change first"));
-    } catch (e) { host.append(el("div", { class: "empty", text: String(e) })); }
+    }
   }
 }
 

@@ -198,3 +198,8 @@ summary { cursor: pointer; color: var(--text-secondary); font-size: 12.5px; }
 .cpick .it.sel { font-weight: 600; }
 .cpick .more { color: var(--muted); font-size: 12px; padding: 4px 8px 2px; }
 .cpick .more:empty { display: none; }
+
+.sw.hatch { background: repeating-linear-gradient(45deg, var(--div-mid) 0 2px, var(--muted) 2px 4px); }
+ul.removed { list-style: none; padding: 0; margin: 0; font-size: 12px; }
+ul.removed li { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+ul.removed li .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
