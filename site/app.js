@@ -99,44 +99,6 @@ function timeline(params) {
   view.replaceChildren();
   if (!COMMITS.length) { view.append(el("div", { class: "card empty", text: "No results recorded yet." })); return; }
 
-  // proofs
-  const pc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.proofs);
-  const card = el("div", { class: "card" });
-  view.append(card);
-  card.append(el("h2", { text: "Proof checking" }),
-              el("p", { class: "sub", text: "Cumulative EasyCrypt checking time per commit (sum over files, minutes). " +
-                "Dashed lines mark a change of machine or tool versions. Click a commit to compare it with the previous one." }));
-  if (!pc.length) card.append(el("div", { class: "empty", text: "No proof timings yet." }));
-  else {
-    const marks = envMarks(c => c.proofs, proofsEnv);
-    const pick = x => go(`#/compare/${COMMITS[x].commit}`);
-    const common = { xLabel: x => short(COMMITS[x].commit), xTitle, envMarks: marks, onPick: pick };
-    card.append(el("h3", { text: "Total" }));
-    lineChart(card, [{ key: "total", label: "total", color: "var(--s1)",
-      points: pc.map(([c, i]) => ({ x: i, y: c.proofs.total_seconds / 60 })) }],
-      { ...common, yFormat: v => `${+v.toFixed(1)} min`, height: 200, aria: "total proof-checking time per commit" });
-    const dirs = [...new Set(pc.flatMap(([c]) => Object.keys(c.proofs.groups || {})))].sort();
-    const series = dirs.map((d, k) => ({ key: d, label: d, color: `var(--s${k % 8 + 1})`,
-      points: pc.filter(([c]) => c.proofs.groups?.[d] != null).map(([c, i]) => ({ x: i, y: c.proofs.groups[d] / 60 })) }));
-    card.append(el("h3", { text: "By top-level directory" }));
-    const host = el("div");
-    let chart;
-    legend(card, series, () => chart.redraw());
-    card.append(host);
-    chart = lineChart(host, series, { ...common, yFormat: v => `${+v.toFixed(1)} min`, endLabels: true,
-                                      aria: "proof-checking time per directory per commit" });
-    const tb = el("tbody");
-    for (const [c] of pc.slice().reverse()) {
-      tb.append(el("tr", {}, el("td", {}, el("a", { href: `#/commit/${c.commit}`, class: "mono", text: short(c.commit) })),
-        el("td", { text: day(c.commit_date) }), el("td", { class: "num", text: minutes(c.proofs.total_seconds) }),
-        ...dirs.map(d => el("td", { class: "num", text: c.proofs.groups?.[d] != null ? minutes(c.proofs.groups[d]) : "" }))));
-    }
-    card.append(el("details", {}, el("summary", { text: "Table view (minutes)" }),
-      el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {},
-        el("th", { text: "commit" }), el("th", { text: "date" }), el("th", { class: "num", text: "total" }),
-        ...dirs.map(d => el("th", { class: "num", text: d })))), tb))));
-  }
-
   // bench, one card per machine
   for (const runner of INDEX.bench_runners) {
     const bc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.bench?.[runner]);
@@ -187,6 +149,48 @@ function timeline(params) {
     card.append(el("details", {}, el("summary", { text: `Table view: ${scheme} at the latest commit (${short(last.commit)})` }),
       el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "backend" }),
         ...opOrder.map(o => el("th", { class: "num", text: o })))), tb))));
+  }
+
+  // proofs
+  const pc = COMMITS.map((c, i) => [c, i]).filter(([c]) => c.proofs);
+  const card = el("div", { class: "card" });
+  view.append(card);
+  card.append(el("h2", { text: "Proof checking" }),
+              el("p", { class: "sub", text: "Cumulative EasyCrypt checking time per commit (sum over files, minutes). " +
+                "Dashed lines mark a change of machine or tool versions. Click a commit to compare it with the previous one." }));
+  if (!pc.length) card.append(el("div", { class: "empty", text: "No proof timings yet." }));
+  else {
+    const marks = envMarks(c => c.proofs, proofsEnv);
+    const pick = x => go(`#/compare/${COMMITS[x].commit}`);
+    const common = { xLabel: x => short(COMMITS[x].commit), xTitle, envMarks: marks, onPick: pick };
+    const pair = el("div", { class: "grid2" });
+    const left = el("div"), right = el("div");
+    pair.append(left, right);
+    card.append(pair);
+    left.append(el("h3", { text: "Total", style: "margin-top:4px" }));
+    lineChart(left, [{ key: "total", label: "total", color: "var(--s1)",
+      points: pc.map(([c, i]) => ({ x: i, y: c.proofs.total_seconds / 60 })) }],
+      { ...common, yFormat: v => `${+v.toFixed(1)} min`, height: 170, aria: "total proof-checking time per commit" });
+    const dirs = [...new Set(pc.flatMap(([c]) => Object.keys(c.proofs.groups || {})))].sort();
+    const series = dirs.map((d, k) => ({ key: d, label: d, color: `var(--s${k % 8 + 1})`,
+      points: pc.filter(([c]) => c.proofs.groups?.[d] != null).map(([c, i]) => ({ x: i, y: c.proofs.groups[d] / 60 })) }));
+    right.append(el("h3", { text: "By top-level directory", style: "margin-top:4px" }));
+    const host = el("div");
+    let chart;
+    legend(right, series, () => chart.redraw());
+    right.append(host);
+    chart = lineChart(host, series, { ...common, yFormat: v => `${+v.toFixed(1)} min`, endLabels: true,
+                                      height: 170, aria: "proof-checking time per directory per commit" });
+    const tb = el("tbody");
+    for (const [c] of pc.slice().reverse()) {
+      tb.append(el("tr", {}, el("td", {}, el("a", { href: `#/commit/${c.commit}`, class: "mono", text: short(c.commit) })),
+        el("td", { text: day(c.commit_date) }), el("td", { class: "num", text: minutes(c.proofs.total_seconds) }),
+        ...dirs.map(d => el("td", { class: "num", text: c.proofs.groups?.[d] != null ? minutes(c.proofs.groups[d]) : "" }))));
+    }
+    card.append(el("details", {}, el("summary", { text: "Table view (minutes)" }),
+      el("div", { class: "tw" }, el("table", {}, el("thead", {}, el("tr", {},
+        el("th", { text: "commit" }), el("th", { text: "date" }), el("th", { class: "num", text: "total" }),
+        ...dirs.map(d => el("th", { class: "num", text: d })))), tb))));
   }
 }
 
