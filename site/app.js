@@ -46,8 +46,16 @@ function bySchemeOrder(a, b) {
 let INDEX = null, COMMITS = [], POS = new Map();
 const cache = new Map();
 const benchHidden = new Map();   // runner -> Set of hidden backends
+// Generated manifests (index.json, series/, pr/) change on every deploy and
+// Pages lets browsers cache everything for 10 minutes: revalidate them
+// (a conditional request, cheap when unchanged). Result files under data/
+// never change once written, so the normal cache is right for them.
 const fetchJSON = url => {
-  if (!cache.has(url)) cache.set(url, fetch(url).then(r => r.ok ? r.json() : Promise.reject(new Error(`${url}: ${r.status}`))));
+  if (!cache.has(url)) {
+    const fresh = !url.startsWith("data/");
+    cache.set(url, fetch(url, fresh ? { cache: "no-cache" } : {})
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`${url}: ${r.status}`))));
+  }
   return cache.get(url);
 };
 const proofsFile = sha => fetchJSON(`data/proofs/${sha}.json`);
