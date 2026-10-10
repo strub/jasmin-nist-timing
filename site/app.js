@@ -7,7 +7,7 @@
 //   #/compare/<a>..<b>       b against a           (?zoom=dir/sub)
 //   #/compare/<b>            b against the commit recorded just before it
 //   #/prs                    pull requests with recorded benchmarks
-//   #/pr/<number>            a PR's bench run against its merge base (?run=<sha>)
+//   #/pr/<number>            a PR run (bench, proofs) against its merge base (?run=<sha>)
 // (#/commit/<sha> is kept as an alias of #/results/<sha>.)
 // Commit ids may be abbreviated.
 
@@ -61,6 +61,7 @@ const fetchJSON = url => {
 const proofsFile = sha => fetchJSON(`data/proofs/${sha}.json`);
 const benchFile = (runner, sha) => fetchJSON(`data/bench/${runner}/${sha}.json`);
 const prBenchFile = (n, runner, sha) => fetchJSON(`data/pr/${n}/bench/${runner}/${sha}.json`);
+const prProofsFile = (n, sha) => fetchJSON(`data/pr/${n}/proofs/${sha}.json`);
 const proofsSeries = () => fetchJSON("series/proofs.json");
 const benchSeries = runner => fetchJSON(`series/bench-${runner}.json`);
 // a bench result file -> { "scheme|backend|operation": [median, p25, p75] }
@@ -512,6 +513,66 @@ function benchCompare(ma, mb) {
   return wrap;
 }
 
+// Proofs comparison A -> B (result files' file lists): totals, per
+// directory and per file, split into files in both runs (the speed change,
+// which gets the verdict), new and removed files; sunburst of B colored by
+// change against A. Appended to `card`.
+function proofsCompare(card, fa, fb, params) {
+  const am = new Map(fa.files.map(f => [f.path, f.seconds]));
+  const bm = new Map(fb.files.map(f => [f.path, f.seconds]));
+  // A change splits into: files in both runs (the speed change, which
+  // gets the verdict), files new in B, and files removed since A.
+  const split = (keep = () => true) => {
+    const r = { ta: 0, tb: 0, ca: 0, cb: 0, added: 0, nAdded: 0, removed: 0, nRemoved: 0 };
+    for (const [p, x] of am) if (keep(p)) {
+      r.ta += x;
+      if (bm.has(p)) { r.ca += x; r.cb += bm.get(p); } else { r.removed += x; r.nRemoved++; }
+    }
+    for (const [p, y] of bm) if (keep(p)) { r.tb += y; if (!am.has(p)) { r.added += y; r.nAdded++; } }
+    return r;
+  };
+  const signed = v => `${v >= 0 ? "+" : "−"}${dur(Math.abs(v))}`;
+  const files = n => `${n} file${n > 1 ? "s" : ""}`;
+  const churn = r => [r.nAdded ? `+${dur(r.added)} new (${files(r.nAdded)})` : null,
+                      r.nRemoved ? `−${dur(r.removed)} removed (${files(r.nRemoved)})` : null].filter(Boolean).join(" · ");
+  const T = split();
+  const dt = delta(T.ca, T.cb, T.ca > 0 && Math.abs(T.cb - T.ca) / T.ca >= NOISE.proofsTotal);
+  card.append(el("div", { class: "tiles", style: "margin-top:10px" },
+    el("div", { class: "tile" }, el("div", { class: "k", text: "A total" }), el("div", { class: "v", text: dur(T.ta) }),
+       el("div", { class: "s muted", text: files(am.size) })),
+    el("div", { class: "tile" }, el("div", { class: "k", text: "B total" }), el("div", { class: "v", text: dur(T.tb) }),
+       el("div", { class: "s muted", text: `${files(bm.size)} · ${signed(T.tb - T.ta)}` })),
+    el("div", { class: "tile" }, el("div", { class: "k", text: "change on files in both" }), el("div", { class: "v" }, deltaEl(dt)),
+       el("div", { class: "s muted", text: [signed(T.cb - T.ca), churn(T)].filter(Boolean).join(" · ") }))));
+  const dirs = [...new Set([...am.keys(), ...bm.keys()].map(p => p.split("/")[0]))].sort();
+  const drows = dirs.map(d => {
+    const r = split(p => p.split("/")[0] === d);
+    const verdict = r.ca > 0
+      ? deltaEl(delta(r.ca, r.cb, Math.abs(r.cb - r.ca) >= NOISE.proofsDir.abs && Math.abs(r.cb - r.ca) / r.ca >= NOISE.proofsDir.pct))
+      : el("span", { class: "muted", text: r.nAdded ? "new" : "removed" });
+    return [d, r.ta ? dur(r.ta) : "—", r.tb ? dur(r.tb) : "—", verdict, churn(r) || "—"];
+  });
+  card.append(el("h3", { text: "By top-level directory" }),
+              fileTable(drows, ["directory", "A", "B", "change on files in both", "new / removed"]));
+  const host = el("div");
+  card.append(el("h3", { text: "B by file, colored by change against A" }), host);
+  sunburst(host, fb.files, { base: fa.files, zoom: params.get("zoom"), onZoom: z => setParam("zoom", z) });
+  const paths = [...new Set([...am.keys(), ...bm.keys()])];
+  const rows = paths.map(p => {
+    const x = am.get(p), y = bm.get(p);
+    const d = (y ?? 0) - (x ?? 0);
+    let cell;
+    if (x == null) cell = el("span", { class: "muted", text: "new" });
+    else if (y == null) cell = el("span", { class: "muted", text: "removed" });
+    else cell = deltaEl(delta(x, y, Math.abs(d) >= NOISE.proofsFile.abs && Math.abs(d) / x >= NOISE.proofsFile.pct));
+    return { d, row: [p, x == null ? "—" : dur(x), y == null ? "—" : dur(y), cell] };
+  }).sort((u, v) => Math.abs(v.d) - Math.abs(u.d));
+  const changed = rows.filter(r => r.row[3].classList?.contains("better") || r.row[3].classList?.contains("worse") || r.row[3].classList?.contains("muted"));
+  card.append(el("h3", { text: `Files with a change beyond noise (${changed.length} of ${rows.length})` }),
+    changed.length ? fileTable(changed.map(r => r.row), ["file", "A", "B", "change"]) : el("div", { class: "muted", text: "None." }),
+    fileTable(rows.map(r => r.row), ["file", "A", "B", "change"], "All files, largest absolute change first"));
+}
+
 // ---------------------------------------------------------------- compare
 async function compareView(a, b, params) {
   nav("compare");
@@ -574,59 +635,7 @@ async function compareView(a, b, params) {
     try { [fa, fb] = await Promise.all([proofsFile(a.commit), proofsFile(b.commit)]); }
     catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
     if (fa && fb) {
-      const am = new Map(fa.files.map(f => [f.path, f.seconds]));
-      const bm = new Map(fb.files.map(f => [f.path, f.seconds]));
-      // A change splits into: files in both runs (the speed change, which
-      // gets the verdict), files new in B, and files removed since A.
-      const split = (keep = () => true) => {
-        const r = { ta: 0, tb: 0, ca: 0, cb: 0, added: 0, nAdded: 0, removed: 0, nRemoved: 0 };
-        for (const [p, x] of am) if (keep(p)) {
-          r.ta += x;
-          if (bm.has(p)) { r.ca += x; r.cb += bm.get(p); } else { r.removed += x; r.nRemoved++; }
-        }
-        for (const [p, y] of bm) if (keep(p)) { r.tb += y; if (!am.has(p)) { r.added += y; r.nAdded++; } }
-        return r;
-      };
-      const signed = v => `${v >= 0 ? "+" : "−"}${dur(Math.abs(v))}`;
-      const files = n => `${n} file${n > 1 ? "s" : ""}`;
-      const churn = r => [r.nAdded ? `+${dur(r.added)} new (${files(r.nAdded)})` : null,
-                          r.nRemoved ? `−${dur(r.removed)} removed (${files(r.nRemoved)})` : null].filter(Boolean).join(" · ");
-      const T = split();
-      const dt = delta(T.ca, T.cb, T.ca > 0 && Math.abs(T.cb - T.ca) / T.ca >= NOISE.proofsTotal);
-      card.append(el("div", { class: "tiles", style: "margin-top:10px" },
-        el("div", { class: "tile" }, el("div", { class: "k", text: "A total" }), el("div", { class: "v", text: dur(T.ta) }),
-           el("div", { class: "s muted", text: files(am.size) })),
-        el("div", { class: "tile" }, el("div", { class: "k", text: "B total" }), el("div", { class: "v", text: dur(T.tb) }),
-           el("div", { class: "s muted", text: `${files(bm.size)} · ${signed(T.tb - T.ta)}` })),
-        el("div", { class: "tile" }, el("div", { class: "k", text: "change on files in both" }), el("div", { class: "v" }, deltaEl(dt)),
-           el("div", { class: "s muted", text: [signed(T.cb - T.ca), churn(T)].filter(Boolean).join(" · ") }))));
-      const dirs = [...new Set([...am.keys(), ...bm.keys()].map(p => p.split("/")[0]))].sort();
-      const drows = dirs.map(d => {
-        const r = split(p => p.split("/")[0] === d);
-        const verdict = r.ca > 0
-          ? deltaEl(delta(r.ca, r.cb, Math.abs(r.cb - r.ca) >= NOISE.proofsDir.abs && Math.abs(r.cb - r.ca) / r.ca >= NOISE.proofsDir.pct))
-          : el("span", { class: "muted", text: r.nAdded ? "new" : "removed" });
-        return [d, r.ta ? dur(r.ta) : "—", r.tb ? dur(r.tb) : "—", verdict, churn(r) || "—"];
-      });
-      card.append(el("h3", { text: "By top-level directory" }),
-                  fileTable(drows, ["directory", "A", "B", "change on files in both", "new / removed"]));
-      const host = el("div");
-      card.append(el("h3", { text: "B by file, colored by change against A" }), host);
-      sunburst(host, fb.files, { base: fa.files, zoom: params.get("zoom"), onZoom: z => setParam("zoom", z) });
-      const paths = [...new Set([...am.keys(), ...bm.keys()])];
-      const rows = paths.map(p => {
-        const x = am.get(p), y = bm.get(p);
-        const d = (y ?? 0) - (x ?? 0);
-        let cell;
-        if (x == null) cell = el("span", { class: "muted", text: "new" });
-        else if (y == null) cell = el("span", { class: "muted", text: "removed" });
-        else cell = deltaEl(delta(x, y, Math.abs(d) >= NOISE.proofsFile.abs && Math.abs(d) / x >= NOISE.proofsFile.pct));
-        return { d, row: [p, x == null ? "—" : dur(x), y == null ? "—" : dur(y), cell] };
-      }).sort((u, v) => Math.abs(v.d) - Math.abs(u.d));
-      const changed = rows.filter(r => r.row[3].classList?.contains("better") || r.row[3].classList?.contains("worse") || r.row[3].classList?.contains("muted"));
-      card.append(el("h3", { text: `Files with a change beyond noise (${changed.length} of ${rows.length})` }),
-        changed.length ? fileTable(changed.map(r => r.row), ["file", "A", "B", "change"]) : el("div", { class: "muted", text: "None." }),
-        fileTable(rows.map(r => r.row), ["file", "A", "B", "change"], "All files, largest absolute change first"));
+      proofsCompare(card, fa, fb, params);
     }
   }
 }
@@ -636,8 +645,8 @@ function prsView() {
   nav("prs");
   const prs = INDEX.prs || [];
   const card = el("div", { class: "card" }, el("h2", { text: "Pull requests" }),
-    el("p", { class: "sub", text: "Benchmarks of labelled pull requests, each run compared with the PR's merge base on main. " +
-      "PR records are kept apart from main's history." }));
+    el("p", { class: "sub", text: "Proof timings and benchmarks of pull requests (benchmarks on PRs labelled bench), " +
+      "each run compared with the PR's merge base on main. PR records are kept apart from main's history." }));
   view.replaceChildren(card);
   if (!prs.length) { card.append(el("div", { class: "empty", text: "No pull request benchmarks recorded yet." })); return; }
   const tb = el("tbody");
@@ -655,7 +664,7 @@ async function prView(number, params) {
   view.replaceChildren(el("div", { class: "card empty", text: "Loading…" }));
   let pr;
   try { pr = await fetchJSON(`pr/${number}.json`); }
-  catch (e) { view.replaceChildren(el("div", { class: "card empty", text: `No benchmarks recorded for PR #${number}.` })); return; }
+  catch (e) { view.replaceChildren(el("div", { class: "card empty", text: `No results recorded for PR #${number}.` })); return; }
   const runs = pr.runs;
   const want = params.get("run");
   const run = (want && runs.filter(r => r.commit.startsWith(want)).pop()) || runs[runs.length - 1];
@@ -675,33 +684,54 @@ async function prView(number, params) {
     sel.addEventListener("change", () => go(`#/pr/${pr.number}?run=${sel.value}`));
     head.append(el("div", { class: "row" }, el("span", { class: "muted", text: `Run (${runs.length}):` }), sel));
   }
-  // base: the merge base's main record, else the closest earlier recorded main commit
-  const hasBench = c => c.bench?.[run.runner];
-  let base = COMMITS.find(c => c.commit === run.merge_base && hasBench(c)), approx = false;
-  if (!base && run.merge_base_date) {
-    const earlier = COMMITS.filter(c => hasBench(c) && (c.commit_date || "") <= run.merge_base_date);
-    base = earlier[earlier.length - 1]; approx = !!base;
+
+  // A per kind of result: the merge base's main record, else the closest
+  // earlier main commit that has one (flagged)
+  const baseFor = has => {
+    const exact = COMMITS.find(c => c.commit === run.merge_base && has(c));
+    if (exact || !run.merge_base_date) return { base: exact, approx: false };
+    const earlier = COMMITS.filter(c => has(c) && (c.commit_date || "") <= run.merge_base_date);
+    return { base: earlier[earlier.length - 1], approx: earlier.length > 0 };
+  };
+  const sides = (base, runId) => el("p", { class: "sub" },
+    "A = ", base ? el("a", { href: `#/results/${base.commit}`, class: "mono", text: short(base.commit) }) : "—",
+    " (main) · B = ", el("span", { class: "mono", text: short(run.commit) }), ` (PR run, ${day(run.date)})`,
+    runId ? " · " : null, runId ? el("a", { href: `${REPO}/actions/runs/${runId}`, text: "CI run" }) : null,
+    base ? " · " : null, base ? el("a", { href: `${REPO}/compare/${base.commit}...${run.commit}`, text: "code diff" }) : null);
+  const approxNote = (base, what) => el("div", { class: "notice", text: `The merge base ${short(run.merge_base || "?")} has no recorded ` +
+    `${what}; compared with ${short(base.commit)}, the closest earlier main commit that has one.` });
+
+  for (const runner of INDEX.bench_runners) {
+    const card = el("div", { class: "card" }, el("h2", { text: `Benchmarks · ${runner}` }));
+    view.append(card);
+    const rb = run.bench?.[runner];
+    if (!rb) { card.append(el("div", { class: "empty", text: "No benchmark for this run (benchmarks run on PRs labelled bench)." })); continue; }
+    const { base, approx } = baseFor(c => c.bench?.[runner]);
+    card.append(sides(base, rb.run_id));
+    if (!base) { card.append(el("div", { class: "empty", text: "No main commit with a recorded benchmark to compare with." })); continue; }
+    if (approx) card.append(approxNote(base, "benchmark"));
+    const n = envNotice(envDiff(benchEnv(base, runner), { ...rb.env, reps: rb.reps, iters: rb.iters }), "Bench");
+    if (n) card.append(n);
+    try {
+      const [ma, mb] = await Promise.all([benchFile(runner, base.commit), prBenchFile(pr.number, runner, run.commit)])
+        .then(ds => ds.map(toM));
+      card.append(benchCompare(ma, mb),
+                  el("details", {}, el("summary", { text: "The PR run on its own (charts)" }), benchBars(runner, mb)));
+    } catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
   }
-  const card = el("div", { class: "card" });
+
+  const card = el("div", { class: "card" }, el("h2", { text: "Proof checking" }));
   view.append(card);
-  card.append(el("h2", { text: `Benchmarks · ${run.runner}` }),
-    el("p", { class: "sub" }, "A = ", base ? el("a", { href: `#/results/${base.commit}`, class: "mono", text: short(base.commit) }) : "—",
-       " (main) · B = ", el("span", { class: "mono", text: short(run.commit) }), ` (PR run, ${day(run.date)})`,
-       run.run_id ? " · " : null, run.run_id ? el("a", { href: `${REPO}/actions/runs/${run.run_id}`, text: "CI run" }) : null,
-       base ? " · " : null, base ? el("a", { href: `${REPO}/compare/${base.commit}...${run.commit}`, text: "code diff" }) : null));
-  if (!base) {
-    card.append(el("div", { class: "empty", text: `No main commit with a recorded benchmark to compare with (merge base ${short(run.merge_base || "?")}).` }));
-    return;
-  }
-  if (approx) card.append(el("div", { class: "notice", text: `The merge base ${short(run.merge_base)} has no recorded benchmark; ` +
-    `compared with ${short(base.commit)}, the closest earlier main commit that has one.` }));
-  const n = envNotice(envDiff(benchEnv(base, run.runner), { ...run.env, reps: run.reps, iters: run.iters }), "Bench");
+  if (!run.proofs) { card.append(el("div", { class: "empty", text: "No proof timings for this run (published once its proofs run succeeds)." })); return; }
+  const { base, approx } = baseFor(c => c.proofs);
+  card.append(sides(base, run.proofs.run_id));
+  if (!base) { card.append(el("div", { class: "empty", text: "No main commit with recorded proof timings to compare with." })); return; }
+  if (approx) card.append(approxNote(base, "proof timings"));
+  const n = envNotice(envDiff(proofsEnv(base), proofsEnv({ proofs: run.proofs })), "Proofs");
   if (n) card.append(n);
   try {
-    const [ma, mb] = await Promise.all([benchFile(run.runner, base.commit), prBenchFile(pr.number, run.runner, run.commit)])
-      .then(ds => ds.map(toM));
-    card.append(benchCompare(ma, mb),
-                el("details", {}, el("summary", { text: "The PR run on its own (charts)" }), benchBars(run.runner, mb)));
+    const [fa, fb] = await Promise.all([proofsFile(base.commit), prProofsFile(pr.number, run.commit)]);
+    proofsCompare(card, fa, fb, params);
   } catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
 }
 
@@ -740,7 +770,8 @@ fetchJSON("index.json").then(ix => {
   COMMITS = ix.commits;
   COMMITS.forEach((c, i) => POS.set(c.commit, i));
   const nprs = (ix.prs || []).length;
-  document.getElementById("gen").textContent = `${COMMITS.length} commits${nprs ? ` · ${nprs} PRs` : ""} · ` +
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  document.getElementById("gen").textContent = `${plural(COMMITS.length, "commit")}${nprs ? ` · ${plural(nprs, "PR")}` : ""} · ` +
     `updated ${ix.generated.replace("T", " ").replace("Z", " UTC")}`;
   window.addEventListener("hashchange", route);
   route();

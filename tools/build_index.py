@@ -6,6 +6,7 @@ Input (written by jasmin-nist's CI, never edited):
     data/proofs/<commit>.json                     proofs timing, main
     data/bench/<runner>/<commit>.json             cycle benchmarks, main
     data/pr/<number>/bench/<runner>/<commit>.json cycle benchmarks of a PR run
+    data/pr/<number>/proofs/<commit>.json         proofs timing of a PR run
 
 Output (into OUT_DIR, rebuilt on every deploy):
 
@@ -16,7 +17,8 @@ Output (into OUT_DIR, rebuilt on every deploy):
                              directory), column-wise, for the Trends tab
     series/bench-<r>.json    median and quartiles per measurement and commit,
                              column-wise, for the Trends tab
-    pr/<number>.json         one PR's bench runs, with their merge base
+    pr/<number>.json         one PR's runs (per head commit: bench and/or
+                             proofs), with their merge base
 
 The dashboard fetches index.json first, a series file only on the Trends
 tab, and a full result file only for the commits or PR runs it shows.
@@ -110,33 +112,50 @@ def main():
             "m": {k: [per[s].get(k) for s in cs] for k in keys},
         })
 
-    # PRs: one manifest each, and a summary in the index
+    # PRs: one manifest each (runs grouped per head commit), and a summary
+    # in the index
     prs = []
     for pdir in sorted((data / "pr").glob("*"), key=lambda p: (len(p.name), p.name)):
         if not pdir.name.isdigit():
             continue
-        runs = []
+        runs = {}
+
+        def run(sha, meta):
+            pr = meta.get("pr", {})
+            r = runs.setdefault(sha, {"commit": sha})
+            for k in ("commit_date", "subject"):
+                if meta.get(k) and not r.get(k):
+                    r[k] = meta[k]
+            for k in ("base", "merge_base", "merge_base_date", "title", "head_ref"):
+                if pr.get(k) and not r.get(k):
+                    r[k] = pr[k]
+            if meta.get("date") and meta["date"] > r.get("date", ""):
+                r["date"] = meta["date"]
+            return r
+
         for f in sorted(pdir.glob("bench/*/*.json")):
             d = load(f)
             if d is None:
                 continue
             meta = d.get("meta", {})
-            pr = meta.get("pr", {})
-            runs.append({"commit": f.stem, "runner": f.parent.name,
-                         "commit_date": meta.get("commit_date"), "subject": meta.get("subject"),
-                         "date": meta.get("date"), "run_id": meta.get("run_id"),
-                         "reps": meta.get("reps"), "iters": meta.get("iters"), "env": meta.get("env"),
-                         "base": pr.get("base"), "merge_base": pr.get("merge_base"),
-                         "merge_base_date": pr.get("merge_base_date"),
-                         "title": pr.get("title"), "head_ref": pr.get("head_ref")})
+            run(f.stem, meta).setdefault("bench", {})[f.parent.name] = {
+                k: meta[k] for k in ("reps", "iters", "env", "date", "run_id") if k in meta}
+        for f in sorted(pdir.glob("proofs/*.json")):
+            d = load(f)
+            if d is None:
+                continue
+            meta = d.get("meta", {})
+            run(f.stem, meta)["proofs"] = {
+                k: meta[k] for k in ("total_seconds", "files", "machine", "tools", "date", "run_id")
+                if k in meta}
         if not runs:
             continue
-        runs.sort(key=lambda r: (r.get("date") or "", r["commit"]))
-        last = runs[-1]
+        ordered_runs = sorted(runs.values(), key=lambda r: (r.get("date") or "", r["commit"]))
+        last = ordered_runs[-1]
         dump(out / "pr" / f"{pdir.name}.json", {"number": int(pdir.name), "title": last.get("title"),
-                                                "head_ref": last.get("head_ref"), "runs": runs})
+                                                "head_ref": last.get("head_ref"), "runs": ordered_runs})
         prs.append({"number": int(pdir.name), "title": last.get("title"),
-                    "head_ref": last.get("head_ref"), "runs": len(runs), "last": last.get("date")})
+                    "head_ref": last.get("head_ref"), "runs": len(ordered_runs), "last": last.get("date")})
     prs.sort(key=lambda p: p.get("last") or "", reverse=True)
 
     dump(out / "index.json", {
