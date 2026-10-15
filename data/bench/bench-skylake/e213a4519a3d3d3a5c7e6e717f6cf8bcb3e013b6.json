@@ -1,0 +1,1268 @@
+{
+ "meta": {
+  "repo": "strub/jasmin-nist",
+  "branch": "main",
+  "commit": "e213a4519a3d3d3a5c7e6e717f6cf8bcb3e013b6",
+  "commit_date": "2026-10-15T08:14:54+02:00",
+  "subject": "proofs(mldsa): thread the generic theories with <-",
+  "run_id": 38691290145,
+  "date": "2026-10-15T06:25:47Z",
+  "reps": 5,
+  "iters": 10000,
+  "runner": "bench-skylake",
+  "env": {
+   "CPU": "Intel(R) Xeon(R) CPU E3-1245 v5 @ 3.50GHz",
+   "pinned core": "7",
+   "freq governor": "performance",
+   "jasminc": "Jasmin Compiler 2026.03.1",
+   "mlkem-native": "57d18f4",
+   "mldsa-native": "db65535",
+   "pq-crystals/kyber": "4768bd3",
+   "pq-crystals/dilithium": "d35ba3f"
+  }
+ },
+ "results": [
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "mlkem-native",
+   "operation": "keypair",
+   "n": 5,
+   "median": 27176,
+   "min": 26666,
+   "max": 28048,
+   "p25": 26752,
+   "p75": 27190,
+   "samples": [
+    28048,
+    26752,
+    26666,
+    27176,
+    27190
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "mlkem-native",
+   "operation": "encaps",
+   "n": 5,
+   "median": 30862,
+   "min": 30798,
+   "max": 32116,
+   "p25": 30804,
+   "p75": 31796,
+   "samples": [
+    30862,
+    32116,
+    31796,
+    30804,
+    30798
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "mlkem-native",
+   "operation": "decaps",
+   "n": 5,
+   "median": 42294,
+   "min": 41780,
+   "max": 43750,
+   "p25": 41812,
+   "p75": 42896,
+   "samples": [
+    43750,
+    42294,
+    41812,
+    42896,
+    41780
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "pqcrystals-ref",
+   "operation": "keypair",
+   "n": 5,
+   "median": 133302,
+   "min": 133152,
+   "max": 133316,
+   "p25": 133158,
+   "p75": 133306,
+   "samples": [
+    133152,
+    133316,
+    133158,
+    133306,
+    133302
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "pqcrystals-ref",
+   "operation": "encaps",
+   "n": 5,
+   "median": 175072,
+   "min": 174694,
+   "max": 175294,
+   "p25": 175056,
+   "p75": 175138,
+   "samples": [
+    174694,
+    175138,
+    175056,
+    175294,
+    175072
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "pqcrystals-ref",
+   "operation": "decaps",
+   "n": 5,
+   "median": 230834,
+   "min": 230716,
+   "max": 230976,
+   "p25": 230744,
+   "p75": 230848,
+   "samples": [
+    230716,
+    230976,
+    230744,
+    230834,
+    230848
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "pqcrystals",
+   "operation": "keypair",
+   "n": 5,
+   "median": 25942,
+   "min": 25908,
+   "max": 25970,
+   "p25": 25938,
+   "p75": 25946,
+   "samples": [
+    25942,
+    25970,
+    25946,
+    25908,
+    25938
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "pqcrystals",
+   "operation": "encaps",
+   "n": 5,
+   "median": 28632,
+   "min": 28598,
+   "max": 28700,
+   "p25": 28614,
+   "p75": 28650,
+   "samples": [
+    28650,
+    28700,
+    28632,
+    28598,
+    28614
+   ]
+  },
+  {
+   "scheme": "ML-KEM-512",
+   "backend": "pqcrystals",
+   "operation": "decaps",
+   "n": 5,
+   "median": 32154,
+   "min": 32116,
+   "max": 32296,
+   "p25": 32128,
+   "p75": 32222,
+   "samples": [
+    32154,
+    32296,
+    32222,
+    32128,
+    32116
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "jasmin",
+   "operation": "keypair",
+   "n": 5,
+   "median": 37226,
+   "min": 37202,
+   "max": 37320,
+   "p25": 37206,
+   "p75": 37238,
+   "samples": [
+    37320,
+    37206,
+    37202,
+    37238,
+    37226
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "jasmin",
+   "operation": "encaps",
+   "n": 5,
+   "median": 38122,
+   "min": 38072,
+   "max": 38368,
+   "p25": 38078,
+   "p75": 38132,
+   "samples": [
+    38072,
+    38078,
+    38122,
+    38132,
+    38368
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "jasmin",
+   "operation": "decaps",
+   "n": 5,
+   "median": 40248,
+   "min": 40216,
+   "max": 40268,
+   "p25": 40228,
+   "p75": 40252,
+   "samples": [
+    40268,
+    40252,
+    40248,
+    40228,
+    40216
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "mlkem-native",
+   "operation": "keypair",
+   "n": 5,
+   "median": 46220,
+   "min": 46160,
+   "max": 47750,
+   "p25": 46214,
+   "p75": 47174,
+   "samples": [
+    47174,
+    46220,
+    46214,
+    47750,
+    46160
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "mlkem-native",
+   "operation": "encaps",
+   "n": 5,
+   "median": 49112,
+   "min": 49072,
+   "max": 50514,
+   "p25": 49102,
+   "p75": 49166,
+   "samples": [
+    49102,
+    50514,
+    49112,
+    49166,
+    49072
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "mlkem-native",
+   "operation": "decaps",
+   "n": 5,
+   "median": 65118,
+   "min": 65050,
+   "max": 66448,
+   "p25": 65052,
+   "p75": 65216,
+   "samples": [
+    66448,
+    65050,
+    65118,
+    65216,
+    65052
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "pqcrystals-ref",
+   "operation": "keypair",
+   "n": 5,
+   "median": 229158,
+   "min": 229036,
+   "max": 375642,
+   "p25": 229156,
+   "p75": 229236,
+   "samples": [
+    229156,
+    229158,
+    375642,
+    229036,
+    229236
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "pqcrystals-ref",
+   "operation": "encaps",
+   "n": 5,
+   "median": 279160,
+   "min": 278852,
+   "max": 279296,
+   "p25": 279034,
+   "p75": 279182,
+   "samples": [
+    278852,
+    279034,
+    279296,
+    279182,
+    279160
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "pqcrystals-ref",
+   "operation": "decaps",
+   "n": 5,
+   "median": 351122,
+   "min": 350786,
+   "max": 351356,
+   "p25": 350804,
+   "p75": 351162,
+   "samples": [
+    350804,
+    350786,
+    351356,
+    351162,
+    351122
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "pqcrystals",
+   "operation": "keypair",
+   "n": 5,
+   "median": 44780,
+   "min": 44738,
+   "max": 44986,
+   "p25": 44752,
+   "p75": 44784,
+   "samples": [
+    44784,
+    44986,
+    44738,
+    44752,
+    44780
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "pqcrystals",
+   "operation": "encaps",
+   "n": 5,
+   "median": 45366,
+   "min": 45280,
+   "max": 45408,
+   "p25": 45342,
+   "p75": 45390,
+   "samples": [
+    45280,
+    45366,
+    45408,
+    45342,
+    45390
+   ]
+  },
+  {
+   "scheme": "ML-KEM-768",
+   "backend": "pqcrystals",
+   "operation": "decaps",
+   "n": 5,
+   "median": 50068,
+   "min": 50018,
+   "max": 50076,
+   "p25": 50022,
+   "p75": 50072,
+   "samples": [
+    50018,
+    50076,
+    50022,
+    50072,
+    50068
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "jasmin",
+   "operation": "keypair",
+   "n": 5,
+   "median": 52490,
+   "min": 52412,
+   "max": 52602,
+   "p25": 52458,
+   "p75": 52544,
+   "samples": [
+    52490,
+    52458,
+    52602,
+    52412,
+    52544
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "jasmin",
+   "operation": "encaps",
+   "n": 5,
+   "median": 54986,
+   "min": 54916,
+   "max": 55252,
+   "p25": 54946,
+   "p75": 55200,
+   "samples": [
+    54986,
+    54946,
+    55252,
+    54916,
+    55200
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "jasmin",
+   "operation": "decaps",
+   "n": 5,
+   "median": 57776,
+   "min": 57718,
+   "max": 58152,
+   "p25": 57722,
+   "p75": 57806,
+   "samples": [
+    57722,
+    57776,
+    58152,
+    57806,
+    57718
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "mlkem-native",
+   "operation": "keypair",
+   "n": 5,
+   "median": 62988,
+   "min": 62752,
+   "max": 70786,
+   "p25": 62842,
+   "p75": 63232,
+   "samples": [
+    62752,
+    70786,
+    62988,
+    63232,
+    62842
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "mlkem-native",
+   "operation": "encaps",
+   "n": 5,
+   "median": 68306,
+   "min": 68024,
+   "max": 70206,
+   "p25": 68036,
+   "p75": 70058,
+   "samples": [
+    68024,
+    70058,
+    68306,
+    70206,
+    68036
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "mlkem-native",
+   "operation": "decaps",
+   "n": 5,
+   "median": 89226,
+   "min": 89174,
+   "max": 91534,
+   "p25": 89220,
+   "p75": 91058,
+   "samples": [
+    91058,
+    89174,
+    91534,
+    89226,
+    89220
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "pqcrystals-ref",
+   "operation": "keypair",
+   "n": 5,
+   "median": 358484,
+   "min": 358416,
+   "max": 358840,
+   "p25": 358450,
+   "p75": 358668,
+   "samples": [
+    358668,
+    358484,
+    358840,
+    358416,
+    358450
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "pqcrystals-ref",
+   "operation": "encaps",
+   "n": 5,
+   "median": 431396,
+   "min": 431256,
+   "max": 431496,
+   "p25": 431282,
+   "p75": 431460,
+   "samples": [
+    431396,
+    431496,
+    431460,
+    431256,
+    431282
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "pqcrystals-ref",
+   "operation": "decaps",
+   "n": 5,
+   "median": 525092,
+   "min": 524932,
+   "max": 525342,
+   "p25": 525090,
+   "p75": 525128,
+   "samples": [
+    524932,
+    525092,
+    525342,
+    525090,
+    525128
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "pqcrystals",
+   "operation": "keypair",
+   "n": 5,
+   "median": 60416,
+   "min": 60376,
+   "max": 60468,
+   "p25": 60378,
+   "p75": 60462,
+   "samples": [
+    60376,
+    60378,
+    60462,
+    60416,
+    60468
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "pqcrystals",
+   "operation": "encaps",
+   "n": 5,
+   "median": 63480,
+   "min": 63456,
+   "max": 63518,
+   "p25": 63472,
+   "p75": 63486,
+   "samples": [
+    63486,
+    63518,
+    63472,
+    63456,
+    63480
+   ]
+  },
+  {
+   "scheme": "ML-KEM-1024",
+   "backend": "pqcrystals",
+   "operation": "decaps",
+   "n": 5,
+   "median": 70142,
+   "min": 70070,
+   "max": 70240,
+   "p25": 70130,
+   "p75": 70220,
+   "samples": [
+    70070,
+    70220,
+    70130,
+    70240,
+    70142
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "jasmin",
+   "operation": "keygen",
+   "n": 5,
+   "median": 85038,
+   "min": 84726,
+   "max": 85422,
+   "p25": 84798,
+   "p75": 85152,
+   "samples": [
+    84726,
+    84798,
+    85038,
+    85422,
+    85152
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "jasmin",
+   "operation": "sign",
+   "n": 5,
+   "median": 482254,
+   "min": 482214,
+   "max": 482760,
+   "p25": 482240,
+   "p75": 482664,
+   "samples": [
+    482214,
+    482254,
+    482664,
+    482760,
+    482240
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "jasmin",
+   "operation": "verify",
+   "n": 5,
+   "median": 97474,
+   "min": 96966,
+   "max": 97510,
+   "p25": 97158,
+   "p75": 97510,
+   "samples": [
+    96966,
+    97158,
+    97510,
+    97474,
+    97510
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "mldsa-native",
+   "operation": "keygen",
+   "n": 5,
+   "median": 100110,
+   "min": 99952,
+   "max": 100920,
+   "p25": 100028,
+   "p75": 100270,
+   "samples": [
+    100028,
+    99952,
+    100270,
+    100110,
+    100920
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "mldsa-native",
+   "operation": "sign",
+   "n": 5,
+   "median": 472068,
+   "min": 471508,
+   "max": 473374,
+   "p25": 471896,
+   "p75": 472084,
+   "samples": [
+    471896,
+    472068,
+    472084,
+    471508,
+    473374
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "mldsa-native",
+   "operation": "verify",
+   "n": 5,
+   "median": 104936,
+   "min": 104832,
+   "max": 105158,
+   "p25": 104870,
+   "p75": 105020,
+   "samples": [
+    105020,
+    104832,
+    104936,
+    104870,
+    105158
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "pqcrystals-ref",
+   "operation": "keygen",
+   "n": 5,
+   "median": 370658,
+   "min": 370500,
+   "max": 371754,
+   "p25": 370618,
+   "p75": 371706,
+   "samples": [
+    370500,
+    371706,
+    370618,
+    371754,
+    370658
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "pqcrystals-ref",
+   "operation": "sign",
+   "n": 5,
+   "median": 2867032,
+   "min": 2862980,
+   "max": 2870446,
+   "p25": 2866352,
+   "p75": 2868204,
+   "samples": [
+    2867032,
+    2870446,
+    2866352,
+    2868204,
+    2862980
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "pqcrystals-ref",
+   "operation": "verify",
+   "n": 5,
+   "median": 422480,
+   "min": 421978,
+   "max": 423272,
+   "p25": 422222,
+   "p75": 422586,
+   "samples": [
+    422586,
+    422480,
+    422222,
+    423272,
+    421978
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "pqcrystals",
+   "operation": "keygen",
+   "n": 5,
+   "median": 90248,
+   "min": 90166,
+   "max": 90352,
+   "p25": 90188,
+   "p75": 90258,
+   "samples": [
+    90166,
+    90258,
+    90248,
+    90352,
+    90188
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "pqcrystals",
+   "operation": "sign",
+   "n": 5,
+   "median": 411920,
+   "min": 411092,
+   "max": 412310,
+   "p25": 411584,
+   "p75": 412250,
+   "samples": [
+    412310,
+    411092,
+    411584,
+    411920,
+    412250
+   ]
+  },
+  {
+   "scheme": "ML-DSA-44",
+   "backend": "pqcrystals",
+   "operation": "verify",
+   "n": 5,
+   "median": 100144,
+   "min": 99964,
+   "max": 101198,
+   "p25": 100060,
+   "p75": 100260,
+   "samples": [
+    100144,
+    100260,
+    99964,
+    100060,
+    101198
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "jasmin",
+   "operation": "keygen",
+   "n": 5,
+   "median": 148938,
+   "min": 148638,
+   "max": 149056,
+   "p25": 148922,
+   "p75": 149024,
+   "samples": [
+    149056,
+    148938,
+    148638,
+    148922,
+    149024
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "jasmin",
+   "operation": "sign",
+   "n": 5,
+   "median": 692794,
+   "min": 691758,
+   "max": 693826,
+   "p25": 692436,
+   "p75": 692896,
+   "samples": [
+    691758,
+    692794,
+    692436,
+    693826,
+    692896
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "jasmin",
+   "operation": "verify",
+   "n": 5,
+   "median": 160216,
+   "min": 159986,
+   "max": 160698,
+   "p25": 160206,
+   "p75": 160240,
+   "samples": [
+    159986,
+    160206,
+    160240,
+    160698,
+    160216
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "mldsa-native",
+   "operation": "keygen",
+   "n": 5,
+   "median": 176146,
+   "min": 175940,
+   "max": 176362,
+   "p25": 175990,
+   "p75": 176294,
+   "samples": [
+    176146,
+    176362,
+    176294,
+    175940,
+    175990
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "mldsa-native",
+   "operation": "sign",
+   "n": 5,
+   "median": 671628,
+   "min": 670108,
+   "max": 672624,
+   "p25": 671566,
+   "p75": 672068,
+   "samples": [
+    671628,
+    672624,
+    672068,
+    670108,
+    671566
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "mldsa-native",
+   "operation": "verify",
+   "n": 5,
+   "median": 174470,
+   "min": 174244,
+   "max": 174788,
+   "p25": 174326,
+   "p75": 174758,
+   "samples": [
+    174470,
+    174758,
+    174788,
+    174244,
+    174326
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "pqcrystals-ref",
+   "operation": "keygen",
+   "n": 5,
+   "median": 610352,
+   "min": 610200,
+   "max": 610552,
+   "p25": 610334,
+   "p75": 610478,
+   "samples": [
+    610478,
+    610552,
+    610200,
+    610352,
+    610334
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "pqcrystals-ref",
+   "operation": "sign",
+   "n": 5,
+   "median": 4067126,
+   "min": 4066432,
+   "max": 4074222,
+   "p25": 4066730,
+   "p75": 4069558,
+   "samples": [
+    4066730,
+    4069558,
+    4074222,
+    4066432,
+    4067126
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "pqcrystals-ref",
+   "operation": "verify",
+   "n": 5,
+   "median": 667124,
+   "min": 666790,
+   "max": 667966,
+   "p25": 666980,
+   "p75": 667380,
+   "samples": [
+    666790,
+    667966,
+    667124,
+    666980,
+    667380
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "pqcrystals",
+   "operation": "keygen",
+   "n": 5,
+   "median": 152474,
+   "min": 152328,
+   "max": 152660,
+   "p25": 152330,
+   "p75": 152498,
+   "samples": [
+    152660,
+    152330,
+    152474,
+    152498,
+    152328
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "pqcrystals",
+   "operation": "sign",
+   "n": 5,
+   "median": 593148,
+   "min": 592426,
+   "max": 593456,
+   "p25": 592652,
+   "p75": 593308,
+   "samples": [
+    592652,
+    593456,
+    593308,
+    593148,
+    592426
+   ]
+  },
+  {
+   "scheme": "ML-DSA-65",
+   "backend": "pqcrystals",
+   "operation": "verify",
+   "n": 5,
+   "median": 159522,
+   "min": 159474,
+   "max": 159952,
+   "p25": 159520,
+   "p75": 159764,
+   "samples": [
+    159952,
+    159522,
+    159520,
+    159764,
+    159474
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "jasmin",
+   "operation": "keygen",
+   "n": 5,
+   "median": 237832,
+   "min": 236328,
+   "max": 238332,
+   "p25": 237548,
+   "p75": 237916,
+   "samples": [
+    237548,
+    237916,
+    238332,
+    237832,
+    236328
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "jasmin",
+   "operation": "sign",
+   "n": 5,
+   "median": 754638,
+   "min": 754038,
+   "max": 755988,
+   "p25": 754350,
+   "p75": 755452,
+   "samples": [
+    754038,
+    754350,
+    755988,
+    755452,
+    754638
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "jasmin",
+   "operation": "verify",
+   "n": 5,
+   "median": 252020,
+   "min": 251412,
+   "max": 252684,
+   "p25": 251954,
+   "p75": 252226,
+   "samples": [
+    251412,
+    252226,
+    252020,
+    252684,
+    251954
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "mldsa-native",
+   "operation": "keygen",
+   "n": 5,
+   "median": 276962,
+   "min": 276112,
+   "max": 277084,
+   "p25": 276592,
+   "p75": 277002,
+   "samples": [
+    276112,
+    276592,
+    276962,
+    277084,
+    277002
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "mldsa-native",
+   "operation": "sign",
+   "n": 5,
+   "median": 797564,
+   "min": 795346,
+   "max": 798114,
+   "p25": 795356,
+   "p75": 797618,
+   "samples": [
+    797564,
+    795356,
+    798114,
+    797618,
+    795346
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "mldsa-native",
+   "operation": "verify",
+   "n": 5,
+   "median": 270764,
+   "min": 270370,
+   "max": 271062,
+   "p25": 270586,
+   "p75": 270812,
+   "samples": [
+    270370,
+    270586,
+    270812,
+    271062,
+    270764
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "pqcrystals-ref",
+   "operation": "keygen",
+   "n": 5,
+   "median": 1000306,
+   "min": 999910,
+   "max": 1001702,
+   "p25": 1000228,
+   "p75": 1000358,
+   "samples": [
+    1000228,
+    1000358,
+    999910,
+    1000306,
+    1001702
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "pqcrystals-ref",
+   "operation": "sign",
+   "n": 5,
+   "median": 4961256,
+   "min": 4957916,
+   "max": 4967706,
+   "p25": 4958364,
+   "p75": 4967512,
+   "samples": [
+    4958364,
+    4961256,
+    4967706,
+    4957916,
+    4967512
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "pqcrystals-ref",
+   "operation": "verify",
+   "n": 5,
+   "median": 1080514,
+   "min": 1080290,
+   "max": 1080888,
+   "p25": 1080452,
+   "p75": 1080824,
+   "samples": [
+    1080452,
+    1080824,
+    1080514,
+    1080290,
+    1080888
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "pqcrystals",
+   "operation": "keygen",
+   "n": 5,
+   "median": 241118,
+   "min": 241012,
+   "max": 241176,
+   "p25": 241048,
+   "p75": 241120,
+   "samples": [
+    241048,
+    241118,
+    241012,
+    241120,
+    241176
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "pqcrystals",
+   "operation": "sign",
+   "n": 5,
+   "median": 654148,
+   "min": 653278,
+   "max": 654606,
+   "p25": 653300,
+   "p75": 654232,
+   "samples": [
+    653300,
+    654606,
+    654148,
+    654232,
+    653278
+   ]
+  },
+  {
+   "scheme": "ML-DSA-87",
+   "backend": "pqcrystals",
+   "operation": "verify",
+   "n": 5,
+   "median": 247848,
+   "min": 247676,
+   "max": 248048,
+   "p25": 247806,
+   "p75": 247972,
+   "samples": [
+    248048,
+    247676,
+    247972,
+    247848,
+    247806
+   ]
+  }
+ ]
+}
