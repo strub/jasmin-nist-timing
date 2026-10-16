@@ -1,0 +1,1338 @@
+{
+ "meta": {
+  "repo": "strub/jasmin-nist",
+  "branch": "main",
+  "commit": "59035ea3f17ff946452177fd58cf2882ade6f4cd",
+  "commit_date": "2026-10-16T17:12:19+02:00",
+  "subject": "proofs(mldsa): reduce EUF-CMA of FIPS 204 (hedged signing) to the target security spec",
+  "run_id": 38922009851,
+  "date": "2026-10-16T15:12:55.357712+00:00",
+  "machine": {
+   "runner": "proofs-runner-1-lima-ci-194516",
+   "arch": "aarch64",
+   "cpus": 5,
+   "jobs": 5
+  },
+  "tools": {
+   "easycrypt": "f583ea24fb1f381414a98257887f657b82f82b3b",
+   "z3": "Z3 version 4.13.4 - 64 bit",
+   "cvc5": "This is cvc5 version 1.3.0"
+  },
+  "files": 328,
+  "total_seconds": 13958.2
+ },
+ "files": [
+  {
+   "path": "core/eclib/CircuitBindings.ec",
+   "seconds": 8.6
+  },
+  {
+   "path": "core/eclib/CircuitBindingsExtra.ec",
+   "seconds": 4.8
+  },
+  {
+   "path": "core/eclib/CoreUtils.ec",
+   "seconds": 0.2
+  },
+  {
+   "path": "core/eclib/DistrExtra.ec",
+   "seconds": 22.1
+  },
+  {
+   "path": "core/eclib/EclibExtra.ec",
+   "seconds": 7.1
+  },
+  {
+   "path": "core/eclib/JArrayExtra.ec",
+   "seconds": 1.8
+  },
+  {
+   "path": "core/eclib/JWordExtra.ec",
+   "seconds": 12.3
+  },
+  {
+   "path": "core/eclib/JWordList.ec",
+   "seconds": 23.2
+  },
+  {
+   "path": "core/eclib/JWord_extra.ec",
+   "seconds": 11.2
+  },
+  {
+   "path": "core/eclib/ListExtra.ec",
+   "seconds": 0.9
+  },
+  {
+   "path": "core/eclib/List_extra.ec",
+   "seconds": 1.6
+  },
+  {
+   "path": "core/eclib/W16extra.ec",
+   "seconds": 2.9
+  },
+  {
+   "path": "core/eclib/W8extra.ec",
+   "seconds": 2.0
+  },
+  {
+   "path": "core/eclib/xof.ec",
+   "seconds": 0.5
+  },
+  {
+   "path": "core/stdlib/algebra/MaxBigop.eca",
+   "seconds": 0.9
+  },
+  {
+   "path": "core/stdlib/algebra/PolyReduceZpCentered.ec",
+   "seconds": 7.8
+  },
+  {
+   "path": "core/stdlib/algebra/TypeWithBot.eca",
+   "seconds": 0.2
+  },
+  {
+   "path": "core/stdlib/algebra/ZModPCentered.ec",
+   "seconds": 5.9
+  },
+  {
+   "path": "core/stdlib/datatypes/FMapExtra.ec",
+   "seconds": 0.7
+  },
+  {
+   "path": "core/stdlib/datatypes/Nneg.ec",
+   "seconds": 0.8
+  },
+  {
+   "path": "core/stdlib/structure/Periodic.ec",
+   "seconds": 1.6
+  },
+  {
+   "path": "core/xarrays/XArray1024.ec",
+   "seconds": 6.5
+  },
+  {
+   "path": "core/xarrays/XArray1088.ec",
+   "seconds": 4.9
+  },
+  {
+   "path": "core/xarrays/XArray1152.ec",
+   "seconds": 3.9
+  },
+  {
+   "path": "core/xarrays/XArray128.ec",
+   "seconds": 7.5
+  },
+  {
+   "path": "core/xarrays/XArray1408.ec",
+   "seconds": 3.9
+  },
+  {
+   "path": "core/xarrays/XArray1410.ec",
+   "seconds": 5.7
+  },
+  {
+   "path": "core/xarrays/XArray1536.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xarrays/XArray1568.ec",
+   "seconds": 4.8
+  },
+  {
+   "path": "core/xarrays/XArray16.ec",
+   "seconds": 6.5
+  },
+  {
+   "path": "core/xarrays/XArray160.ec",
+   "seconds": 7.2
+  },
+  {
+   "path": "core/xarrays/XArray192.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "core/xarrays/XArray2048.ec",
+   "seconds": 4.7
+  },
+  {
+   "path": "core/xarrays/XArray24.ec",
+   "seconds": 4.8
+  },
+  {
+   "path": "core/xarrays/XArray25.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xarrays/XArray256.ec",
+   "seconds": 9.0
+  },
+  {
+   "path": "core/xarrays/XArray32.ec",
+   "seconds": 6.3
+  },
+  {
+   "path": "core/xarrays/XArray320.ec",
+   "seconds": 5.7
+  },
+  {
+   "path": "core/xarrays/XArray384.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "core/xarrays/XArray4.ec",
+   "seconds": 5.8
+  },
+  {
+   "path": "core/xarrays/XArray40.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xarrays/XArray416.ec",
+   "seconds": 5.8
+  },
+  {
+   "path": "core/xarrays/XArray48.ec",
+   "seconds": 5.7
+  },
+  {
+   "path": "core/xarrays/XArray5.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xarrays/XArray56.ec",
+   "seconds": 4.6
+  },
+  {
+   "path": "core/xarrays/XArray576.ec",
+   "seconds": 5.7
+  },
+  {
+   "path": "core/xarrays/XArray6.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xarrays/XArray640.ec",
+   "seconds": 5.7
+  },
+  {
+   "path": "core/xarrays/XArray7.ec",
+   "seconds": 3.9
+  },
+  {
+   "path": "core/xarrays/XArray768.ec",
+   "seconds": 6.3
+  },
+  {
+   "path": "core/xarrays/XArray7680.ec",
+   "seconds": 4.1
+  },
+  {
+   "path": "core/xarrays/XArray8.ec",
+   "seconds": 5.0
+  },
+  {
+   "path": "core/xarrays/XArray96.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "core/xarrays/XArray960.ec",
+   "seconds": 5.7
+  },
+  {
+   "path": "core/xwords/XWord10.ec",
+   "seconds": 4.1
+  },
+  {
+   "path": "core/xwords/XWord11.ec",
+   "seconds": 4.1
+  },
+  {
+   "path": "core/xwords/XWord12.ec",
+   "seconds": 4.1
+  },
+  {
+   "path": "core/xwords/XWord128.ec",
+   "seconds": 3.9
+  },
+  {
+   "path": "core/xwords/XWord13.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord18.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord20.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord256.ec",
+   "seconds": 4.4
+  },
+  {
+   "path": "core/xwords/XWord3.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord4.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord5.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord512.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "core/xwords/XWord6.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "core/xwords/XWord64.ec",
+   "seconds": 3.9
+  },
+  {
+   "path": "fips202/avx2/Avx2_extra.ec",
+   "seconds": 5.1
+  },
+  {
+   "path": "fips202/avx2/Keccak1600_avx2.ec",
+   "seconds": 11.2
+  },
+  {
+   "path": "fips202/avx2/Keccak1600_avx2x4.ec",
+   "seconds": 13.5
+  },
+  {
+   "path": "fips202/avx2/Keccak1600_fixedsizes_avx2.ec",
+   "seconds": 138.3
+  },
+  {
+   "path": "fips202/avx2/Keccak1600_fixedsizes_avx2x4.ec",
+   "seconds": 210.3
+  },
+  {
+   "path": "fips202/avx2/Keccak1600_updstate_avx2x4.ec",
+   "seconds": 265.0
+  },
+  {
+   "path": "fips202/avx2/Keccakf1600_avx2.ec",
+   "seconds": 19.8
+  },
+  {
+   "path": "fips202/avx2/Keccakf1600_avx2x4.ec",
+   "seconds": 5.9
+  },
+  {
+   "path": "fips202/avx2/Keccakf1600_avx2x4_alt.ec",
+   "seconds": 133.3
+  },
+  {
+   "path": "fips202/avx2/Keccakf1600_avx2x4_nat.ec",
+   "seconds": 42.5
+  },
+  {
+   "path": "fips202/avx2/Keccakf1600_avx2x4_ref.ec",
+   "seconds": 23.7
+  },
+  {
+   "path": "fips202/avx2/kck_abs_bindings.ec",
+   "seconds": 18.9
+  },
+  {
+   "path": "fips202/avx2/kck_bindings.ec",
+   "seconds": 70.8
+  },
+  {
+   "path": "fips202/common/Keccak1600_statebytes.ec",
+   "seconds": 13.0
+  },
+  {
+   "path": "fips202/common/Keccak1600_subreadwrite.ec",
+   "seconds": 232.3
+  },
+  {
+   "path": "fips202/common/Keccak1600_updstate.ec",
+   "seconds": 20.2
+  },
+  {
+   "path": "fips202/common/Keccak1600_updstate_finish.ec",
+   "seconds": 67.6
+  },
+  {
+   "path": "fips202/common/keccak_bindings.ec",
+   "seconds": 25.4
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_Jazz.ec",
+   "seconds": 3.3
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_Jazz_ASIZE.ec",
+   "seconds": 3.6
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_fixedsizes_avx2_checkXtr.ec",
+   "seconds": 12.6
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_fixedsizes_avx2x4_checkXtr.ec",
+   "seconds": 13.5
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_fixedsizes_ref_checkXtr.ec",
+   "seconds": 10.4
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_subreadwrite_checkXtr.ec",
+   "seconds": 5.4
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_updstate_avx2x4_checkXtr.ec",
+   "seconds": 12.3
+  },
+  {
+   "path": "fips202/extracted/Keccak1600_updstate_ref_checkXtr.ec",
+   "seconds": 27.4
+  },
+  {
+   "path": "fips202/ref/Keccak1600_fixedsizes_ref.ec",
+   "seconds": 120.5
+  },
+  {
+   "path": "fips202/ref/Keccak1600_ref.ec",
+   "seconds": 5.3
+  },
+  {
+   "path": "fips202/ref/Keccak1600_updstate_ref.ec",
+   "seconds": 146.1
+  },
+  {
+   "path": "fips202/ref/Keccakf1600.ec",
+   "seconds": 6.6
+  },
+  {
+   "path": "fips202/ref/Keccakf1600_basic.ec",
+   "seconds": 15.5
+  },
+  {
+   "path": "fips202/ref/Keccakf1600_opt.ec",
+   "seconds": 406.0
+  },
+  {
+   "path": "fips202/ref/Keccakf1600_ref.ec",
+   "seconds": 13.6
+  },
+  {
+   "path": "fips202/spec/FIPS202_Keccakf1600.ec",
+   "seconds": 1.7
+  },
+  {
+   "path": "fips202/spec/FIPS202_SHA3.ec",
+   "seconds": 1.8
+  },
+  {
+   "path": "fips202/spec/Keccak1600_arrays.ec",
+   "seconds": 1.5
+  },
+  {
+   "path": "fips202/spec/properties/FIPS202_SHA3_Spec.ec",
+   "seconds": 7.7
+  },
+  {
+   "path": "fips202/spec/properties/Keccak1600_Orbit.ec",
+   "seconds": 8.7
+  },
+  {
+   "path": "fips202/spec/properties/Keccak1600_Spec.ec",
+   "seconds": 26.0
+  },
+  {
+   "path": "fips202/spec/properties/Keccakf1600_Perm.ec",
+   "seconds": 10.1
+  },
+  {
+   "path": "fips202/spec/properties/Keccakf1600_Spec.ec",
+   "seconds": 15.6
+  },
+  {
+   "path": "mldsa/eclib/ArrayExtra.ec",
+   "seconds": 1.5
+  },
+  {
+   "path": "mldsa/eclib/CoreUtils.ec",
+   "seconds": 0.3
+  },
+  {
+   "path": "mldsa/eclib/JArrayExtra.ec",
+   "seconds": 1.7
+  },
+  {
+   "path": "mldsa/eclib/JWordExtra.ec",
+   "seconds": 3.8
+  },
+  {
+   "path": "mldsa/eclib/ListExtra.ec",
+   "seconds": 0.8
+  },
+  {
+   "path": "mldsa/eclib/bindings.ec",
+   "seconds": 4.1
+  },
+  {
+   "path": "mldsa/eclib/xof.ec",
+   "seconds": 0.5
+  },
+  {
+   "path": "mldsa/extraction/Mldsa44.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "mldsa/extraction/Mldsa65.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "mldsa/extraction/Mldsa87.ec",
+   "seconds": 5.6
+  },
+  {
+   "path": "mldsa/generic/LayoutT.ec",
+   "seconds": 3.3
+  },
+  {
+   "path": "mldsa/generic/Mldsa44I.ec",
+   "seconds": 12.2
+  },
+  {
+   "path": "mldsa/generic/Mldsa65I.ec",
+   "seconds": 12.3
+  },
+  {
+   "path": "mldsa/generic/Mldsa87I.ec",
+   "seconds": 12.7
+  },
+  {
+   "path": "mldsa/generic/MldsaConstants.ec",
+   "seconds": 1.8
+  },
+  {
+   "path": "mldsa/generic/MldsaT.ec",
+   "seconds": 4.4
+  },
+  {
+   "path": "mldsa/security/DParams.eca",
+   "seconds": 0.7
+  },
+  {
+   "path": "mldsa/security/DRing.eca",
+   "seconds": 1.8
+  },
+  {
+   "path": "mldsa/security/DS_ROM.ec",
+   "seconds": 1.1
+  },
+  {
+   "path": "mldsa/security/DVect.eca",
+   "seconds": 5.9
+  },
+  {
+   "path": "mldsa/security/MLDSATarget.ec",
+   "seconds": 2.5
+  },
+  {
+   "path": "mldsa/security/RejectionRO.ec",
+   "seconds": 9.3
+  },
+  {
+   "path": "mldsa/security/SampleInBallEquiv.eca",
+   "seconds": 42.8
+  },
+  {
+   "path": "mldsa/security/utils/AbstractSampling.eca",
+   "seconds": 4.6
+  },
+  {
+   "path": "mldsa/security/utils/Byte.ec",
+   "seconds": 1.3
+  },
+  {
+   "path": "mldsa/security/utils/DistrExtras.ec",
+   "seconds": 10.4
+  },
+  {
+   "path": "mldsa/security/utils/Geometric.ec",
+   "seconds": 8.2
+  },
+  {
+   "path": "mldsa/security/utils/Leakage.ec",
+   "seconds": 1.2
+  },
+  {
+   "path": "mldsa/security/utils/MatPlus.eca",
+   "seconds": 1.8
+  },
+  {
+   "path": "mldsa/security/utils/Nat.ec",
+   "seconds": 8.6
+  },
+  {
+   "path": "mldsa/security/utils/Supplementary.ec",
+   "seconds": 2.0
+  },
+  {
+   "path": "mldsa/spec/Conversion.ec",
+   "seconds": 11.4
+  },
+  {
+   "path": "mldsa/spec/Decompose.ec",
+   "seconds": 10.0
+  },
+  {
+   "path": "mldsa/spec/GFq.ec",
+   "seconds": 4.6
+  },
+  {
+   "path": "mldsa/spec/MLDSA.ec",
+   "seconds": 7.8
+  },
+  {
+   "path": "mldsa/spec/MLDSA_W32_Rep.ec",
+   "seconds": 4.9
+  },
+  {
+   "path": "mldsa/spec/MLDSA_W32_Vec.ec",
+   "seconds": 7.3
+  },
+  {
+   "path": "mldsa/spec/Parameters.ec",
+   "seconds": 2.4
+  },
+  {
+   "path": "mldsa/spec/Rq.ec",
+   "seconds": 8.1
+  },
+  {
+   "path": "mldsa/spec/Sampling.ec",
+   "seconds": 58.6
+  },
+  {
+   "path": "mldsa/spec/Serialization.ec",
+   "seconds": 20.9
+  },
+  {
+   "path": "mldsa/spec/Spec44.ec",
+   "seconds": 6.2
+  },
+  {
+   "path": "mldsa/spec/Spec65.ec",
+   "seconds": 6.0
+  },
+  {
+   "path": "mldsa/spec/Spec87.ec",
+   "seconds": 6.2
+  },
+  {
+   "path": "mldsa/spec/Symmetric.ec",
+   "seconds": 4.0
+  },
+  {
+   "path": "mldsa/spec/VecMat.ec",
+   "seconds": 70.0
+  },
+  {
+   "path": "mldsa/spec/properties/ConcreteDRing.ec",
+   "seconds": 7.9
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSATargetFIPS.ec",
+   "seconds": 13.5
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ExpandS.ec",
+   "seconds": 21.5
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_RO.ec",
+   "seconds": 28.0
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep.ec",
+   "seconds": 13.0
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop1.ec",
+   "seconds": 28.2
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop10.ec",
+   "seconds": 17.2
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop11.ec",
+   "seconds": 21.6
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop12.ec",
+   "seconds": 26.4
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop13.ec",
+   "seconds": 46.0
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop14.ec",
+   "seconds": 24.2
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop15.ec",
+   "seconds": 22.0
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop16.ec",
+   "seconds": 23.7
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop17.ec",
+   "seconds": 27.3
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop18.ec",
+   "seconds": 14.7
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop2.ec",
+   "seconds": 36.8
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop3.ec",
+   "seconds": 30.0
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop4.ec",
+   "seconds": 42.8
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop5.ec",
+   "seconds": 40.0
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop6.ec",
+   "seconds": 13.7
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop7.ec",
+   "seconds": 29.6
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop8.ec",
+   "seconds": 18.2
+  },
+  {
+   "path": "mldsa/spec/properties/MLDSA_ROSep_Hop9.ec",
+   "seconds": 12.2
+  },
+  {
+   "path": "mldsa/spec/properties/ZqRounding.eca",
+   "seconds": 60.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/avx2red.ec",
+   "seconds": 22.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/crspoly.ec",
+   "seconds": 3.2
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/fnttalg.ec",
+   "seconds": 24.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/fnttalgcorrect.ec",
+   "seconds": 12.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/fnttcorrect.ec",
+   "seconds": 41.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/inttalg.ec",
+   "seconds": 29.3
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/inttalgcorrect.ec",
+   "seconds": 12.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/inttcorrect.ec",
+   "seconds": 33.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/listred.ec",
+   "seconds": 1.3
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/nttalg.ec",
+   "seconds": 16.2
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/nttlink.ec",
+   "seconds": 11.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/nttlogspec.ec",
+   "seconds": 1.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/nttpoly.ec",
+   "seconds": 28.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/nttspec.ec",
+   "seconds": 24.2
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/nttzetas.ec",
+   "seconds": 10.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/pwmulcorrect.ec",
+   "seconds": 20.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/ntt/pwmultest.ec",
+   "seconds": 20.0
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/polyslices.ec",
+   "seconds": 6.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/agree.ec",
+   "seconds": 3.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/errshuffle.ec",
+   "seconds": 57.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/prefixarray.ec",
+   "seconds": 3.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/rejstream.ec",
+   "seconds": 6.9
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/sha3x4.ec",
+   "seconds": 67.9
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/w8pack.ec",
+   "seconds": 3.0
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/sample/warraypack.ec",
+   "seconds": 3.0
+  },
+  {
+   "path": "mldsa/x86-64/avx2/common/vmov.ec",
+   "seconds": 3.0
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/AexpandT.ec",
+   "seconds": 112.3
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/BaseT.ec",
+   "seconds": 12.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/ChallengeT.ec",
+   "seconds": 61.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/ColumnVectorT.ec",
+   "seconds": 71.9
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/CommitmentT.ec",
+   "seconds": 21.0
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/CommonInvertNttT.ec",
+   "seconds": 19.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/CommonModularT.ec",
+   "seconds": 18.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/CommonNttT.ec",
+   "seconds": 19.7
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/CommonReduceT.ec",
+   "seconds": 35.9
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/CommonRoundingT.ec",
+   "seconds": 44.7
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/ErrorPolynomialT.ec",
+   "seconds": 12.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/ErrorSamplerT.ec",
+   "seconds": 131.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/ErrorVectorsT.ec",
+   "seconds": 58.7
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/Gamma1T.ec",
+   "seconds": 39.0
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/HashingT.ec",
+   "seconds": 59.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/KeygenT.ec",
+   "seconds": 125.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/MaskT.ec",
+   "seconds": 60.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/MatrixAT.ec",
+   "seconds": 36.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/PolynomialT.ec",
+   "seconds": 52.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/PreludeT.ec",
+   "seconds": 21.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/RoundingT.ec",
+   "seconds": 311.2
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/RowVectorT.ec",
+   "seconds": 48.3
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/S1T.ec",
+   "seconds": 36.3
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/S2T.ec",
+   "seconds": 36.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/SignNormChecksT.ec",
+   "seconds": 122.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/SignT.ec",
+   "seconds": 213.7
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/SignatureT.ec",
+   "seconds": 92.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/T0T.ec",
+   "seconds": 53.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/T1T.ec",
+   "seconds": 38.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/generic/VerifyT.ec",
+   "seconds": 130.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/ml_dsa_44/correctness44.ec",
+   "seconds": 115.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/ml_dsa_44/instances44.ec",
+   "seconds": 118.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/ml_dsa_65/correctness65.ec",
+   "seconds": 119.9
+  },
+  {
+   "path": "mldsa/x86-64/avx2/ml_dsa_65/instances65.ec",
+   "seconds": 121.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/ml_dsa_87/correctness87.ec",
+   "seconds": 113.9
+  },
+  {
+   "path": "mldsa/x86-64/avx2/ml_dsa_87/instances87.ec",
+   "seconds": 117.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/variants/Eta2T.ec",
+   "seconds": 57.4
+  },
+  {
+   "path": "mldsa/x86-64/avx2/variants/Eta4T.ec",
+   "seconds": 42.6
+  },
+  {
+   "path": "mldsa/x86-64/avx2/variants/Gamma1Bits18T.ec",
+   "seconds": 41.5
+  },
+  {
+   "path": "mldsa/x86-64/avx2/variants/Gamma1Bits20T.ec",
+   "seconds": 43.1
+  },
+  {
+   "path": "mldsa/x86-64/avx2/variants/W1Bits4T.ec",
+   "seconds": 25.8
+  },
+  {
+   "path": "mldsa/x86-64/avx2/variants/W1Bits6T.ec",
+   "seconds": 24.1
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM1024_prelude.ec",
+   "seconds": 0.5
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_InnerPKE_avx2_new.ec",
+   "seconds": 361.7
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_KEM_avx2.ec",
+   "seconds": 91.6
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_PolyVec_avx2.ec",
+   "seconds": 28.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_PolyVec_avx2_circuit.ec",
+   "seconds": 266.6
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_Poly_avx2_circuit_1024.ec",
+   "seconds": 55.2
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_W16_Rep.ec",
+   "seconds": 6.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_avx2_equivs.ec",
+   "seconds": 0.2
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_genmatrix_avx2.ec",
+   "seconds": 244.0
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_getnoise_avx2.ec",
+   "seconds": 98.2
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/MLKEM_keccak_avx2.ec",
+   "seconds": 144.3
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/NTT_avx2.ec",
+   "seconds": 154.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/circuit_sem_1024.ec",
+   "seconds": 56.1
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/Fq.ec",
+   "seconds": 15.5
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/Fq_avx2.ec",
+   "seconds": 181.0
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/MLKEM_Poly_avx2.ec",
+   "seconds": 50.7
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/MLKEM_Poly_avx2_circuit.ec",
+   "seconds": 42.3
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/NTT_AVX_Fq.ec",
+   "seconds": 278.7
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/NTT_AVX_j.ec",
+   "seconds": 667.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/NTT_avx2_poly.ec",
+   "seconds": 117.0
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/common/circuit_semantics.ec",
+   "seconds": 24.9
+  },
+  {
+   "path": "mlkem-correctness/avx2/1024/mlkem_filters_bridge.ec",
+   "seconds": 249.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM768_prelude.ec",
+   "seconds": 1.0
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_InnerPKE_avx2_new.ec",
+   "seconds": 264.9
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_KEM_avx2.ec",
+   "seconds": 90.1
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_PolyVec_avx2.ec",
+   "seconds": 18.9
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_PolyVec_avx2_circuit.ec",
+   "seconds": 198.1
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_Poly_avx2_circuit_768.ec",
+   "seconds": 32.7
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_W16_Rep.ec",
+   "seconds": 5.3
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_avx2_equivs.ec",
+   "seconds": 0.1
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_genmatrix_avx2.ec",
+   "seconds": 155.6
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_getnoise_avx2.ec",
+   "seconds": 63.2
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/MLKEM_keccak_avx2.ec",
+   "seconds": 117.1
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/NTT_avx2.ec",
+   "seconds": 84.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/circuit_sem_768.ec",
+   "seconds": 46.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/Fq.ec",
+   "seconds": 12.4
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/Fq_avx2.ec",
+   "seconds": 113.8
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/MLKEM_Poly_avx2.ec",
+   "seconds": 33.0
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/MLKEM_Poly_avx2_circuit.ec",
+   "seconds": 25.5
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/NTT_AVX_Fq.ec",
+   "seconds": 197.6
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/NTT_AVX_j.ec",
+   "seconds": 638.9
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/NTT_avx2_poly.ec",
+   "seconds": 79.9
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/common/circuit_semantics.ec",
+   "seconds": 14.2
+  },
+  {
+   "path": "mlkem-correctness/avx2/768/mlkem_filters_bridge.ec",
+   "seconds": 170.8
+  },
+  {
+   "path": "mlkem/eclib/AVX2_Ops.ec",
+   "seconds": 25.8
+  },
+  {
+   "path": "mlkem/eclib/Fastexp.ec",
+   "seconds": 2.1
+  },
+  {
+   "path": "mlkem/eclib/For.ec",
+   "seconds": 1.6
+  },
+  {
+   "path": "mlkem/eclib/IntDiv_extra.ec",
+   "seconds": 3.8
+  },
+  {
+   "path": "mlkem/eclib/Jcheck.ec",
+   "seconds": 1.2
+  },
+  {
+   "path": "mlkem/eclib/MLKEMFCLib.ec",
+   "seconds": 32.4
+  },
+  {
+   "path": "mlkem/eclib/Montgomery.ec",
+   "seconds": 13.1
+  },
+  {
+   "path": "mlkem/eclib/Montgomery16.ec",
+   "seconds": 20.7
+  },
+  {
+   "path": "mlkem/eclib/NTTAlgebra.ec",
+   "seconds": 320.1
+  },
+  {
+   "path": "mlkem/eclib/NTT_Fq.ec",
+   "seconds": 39.8
+  },
+  {
+   "path": "mlkem/eclib/barrett_mlkem_general.ec",
+   "seconds": 3.1
+  },
+  {
+   "path": "mlkem/eclib/mlkem_bindings.ec",
+   "seconds": 4.5
+  },
+  {
+   "path": "mlkem/eclib/mlkem_filters.ec",
+   "seconds": 370.8
+  },
+  {
+   "path": "mlkem/security/FLPRG.eca",
+   "seconds": 0.2
+  },
+  {
+   "path": "mlkem/security/FO_MLKEM.ec",
+   "seconds": 19.4
+  },
+  {
+   "path": "mlkem/security/FO_TT.ec",
+   "seconds": 83.4
+  },
+  {
+   "path": "mlkem/security/FO_UU.ec",
+   "seconds": 67.2
+  },
+  {
+   "path": "mlkem/security/KEM_ROM.ec",
+   "seconds": 1.4
+  },
+  {
+   "path": "mlkem/security/MLWE.ec",
+   "seconds": 11.2
+  },
+  {
+   "path": "mlkem/security/MLWE_PKE.ec",
+   "seconds": 22.1
+  },
+  {
+   "path": "mlkem/security/MLWE_PKE_Basic.ec",
+   "seconds": 9.8
+  },
+  {
+   "path": "mlkem/security/MLWE_PKE_Hash.ec",
+   "seconds": 35.6
+  },
+  {
+   "path": "mlkem/security/PKE_ROM.ec",
+   "seconds": 6.4
+  },
+  {
+   "path": "mlkem/spec/GFq.ec",
+   "seconds": 1.5
+  },
+  {
+   "path": "mlkem/spec/KPKE.ec",
+   "seconds": 4.9
+  },
+  {
+   "path": "mlkem/spec/MLKEM.ec",
+   "seconds": 5.1
+  },
+  {
+   "path": "mlkem/spec/Parameters.ec",
+   "seconds": 1.5
+  },
+  {
+   "path": "mlkem/spec/Rq.ec",
+   "seconds": 5.8
+  },
+  {
+   "path": "mlkem/spec/Sampling.ec",
+   "seconds": 5.0
+  },
+  {
+   "path": "mlkem/spec/Serialization.ec",
+   "seconds": 5.3
+  },
+  {
+   "path": "mlkem/spec/Symmetric.ec",
+   "seconds": 4.8
+  },
+  {
+   "path": "mlkem/spec/VecMat.ec",
+   "seconds": 7.5
+  },
+  {
+   "path": "mlkem/spec/properties/Correctness.ec",
+   "seconds": 92.8
+  },
+  {
+   "path": "mlkem/spec/properties/EncDecCorrectness.ec",
+   "seconds": 20.7
+  },
+  {
+   "path": "mlkem/spec/properties/InnerPKE_Op.ec",
+   "seconds": 32.7
+  },
+  {
+   "path": "mlkem/spec/properties/MLKEMLib.ec",
+   "seconds": 10.5
+  },
+  {
+   "path": "mlkem/spec/properties/MLKEMSecurity.ec",
+   "seconds": 86.1
+  }
+ ]
+}
