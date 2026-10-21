@@ -100,9 +100,11 @@ function stepsOf(c) {
   return { prev: runs[i - 1] || null, next: runs[i + 1] || null };
 }
 // A for a PR run, for one kind of result: the merge base's main record, else
-// the closest earlier main commit that has one (approx)
+// the merge base's PR run (a stacked PR's base PR), else the closest earlier
+// main commit that has one (approx)
 function baseOf(run, has) {
-  const exact = COMMITS.find(c => c.commit === run.merge_base && has(c));
+  const exact = COMMITS.find(c => c.commit === run.merge_base && has(c))
+             || RUNS.find(r => r.commit === run.merge_base && has(r));
   if (exact || !run.merge_base_date) return { base: exact, approx: false };
   const t = Date.parse(run.merge_base_date);   // dates come with different offsets
   const earlier = COMMITS.filter(c => has(c) && Date.parse(c.commit_date || "") <= t);
@@ -113,6 +115,9 @@ const nextOf = (c, has) => { for (let i = POS.get(c.commit) + 1; i < COMMITS.len
 const when = c => isRun(c) ? c.date : c.commit_date;
 const tag = c => isRun(c) ? `#${c.pr} ${short(c.commit)}` : short(c.commit);
 const label = c => `${tag(c)} · ${day(when(c))} · ${c.subject || ""}`;
+// the kinds of results an entry has, for the pickers
+const kinds = c => [Object.keys(c.bench || {}).length ? "bench" : null, c.proofs ? "proofs" : null]
+  .filter(Boolean).join(" + ");
 const xTitle = x => COMMITS[x] ? label(COMMITS[x]) : "";
 
 // environment fingerprints: a change draws a marker and a compare notice
@@ -184,7 +189,7 @@ function commitPicker(cur, onPick, aria, items = COMMITS) {
       const it = el("div", { class: "it" + (i === active ? " on" : "") + (c === cur ? " sel" : ""),
                              role: "option", "aria-selected": String(c === cur) },
         el("span", { class: "mono", text: tag(c) }), el("span", { class: "muted", text: day(when(c)) }),
-        el("span", { class: "subj", text: c.subject || "" }));
+        el("span", { class: "subj", text: c.subject || "" }), el("span", { class: "muted", text: kinds(c) }));
       it.addEventListener("pointerdown", ev => { ev.preventDefault(); pick(c); });
       return it;
     }));
@@ -726,12 +731,14 @@ async function prView(number, params) {
 
   const baseFor = has => baseOf(run, has);
   const sides = (base, runId) => el("p", { class: "sub" },
-    "A = ", base ? el("a", { href: `#/results/${base.commit}`, class: "mono", text: short(base.commit) }) : "—",
-    " (main) · B = ", el("span", { class: "mono", text: short(run.commit) }), ` (PR run, ${day(run.date)})`,
+    "A = ", !base ? "—" : isRun(base)
+      ? el("a", { href: `#/pr/${base.pr}?run=${base.commit}`, class: "mono", text: tag(base) })
+      : el("a", { href: `#/results/${base.commit}`, class: "mono", text: short(base.commit) }),
+    base && isRun(base) ? " (PR run) · B = " : " (main) · B = ", el("span", { class: "mono", text: short(run.commit) }), ` (PR run, ${day(run.date)})`,
     runId ? " · " : null, runId ? el("a", { href: `${REPO}/actions/runs/${runId}`, text: "CI run" }) : null,
     base ? " · " : null, base ? el("a", { href: `${REPO}/compare/${base.commit}...${run.commit}`, text: "code diff" }) : null);
   const approxNote = (base, what) => el("div", { class: "notice", text: `The merge base ${short(run.merge_base || "?")} has no recorded ` +
-    `${what}; compared with ${short(base.commit)}, the closest earlier main commit that has one.` });
+    `${what}, on main or as a PR run; compared with ${short(base.commit)}, the closest earlier main commit that has one.` });
 
   for (const runner of INDEX.bench_runners) {
     const card = el("div", { class: "card" }, el("h2", { text: `Benchmarks · ${runner}` }));
@@ -745,7 +752,7 @@ async function prView(number, params) {
     const n = envNotice(envDiff(benchEnv(base, runner), { ...rb.env, reps: rb.reps, iters: rb.iters }), "Bench");
     if (n) card.append(n);
     try {
-      const [ma, mb] = await Promise.all([benchFile(runner, base.commit), prBenchFile(pr.number, runner, run.commit)])
+      const [ma, mb] = await Promise.all([benchOf(base, runner), prBenchFile(pr.number, runner, run.commit)])
         .then(ds => ds.map(toM));
       card.append(benchCompare(ma, mb),
                   el("details", {}, el("summary", { text: "The PR run on its own (charts)" }), benchBars(runner, mb)));
@@ -762,7 +769,7 @@ async function prView(number, params) {
   const n = envNotice(envDiff(proofsEnv(base), proofsEnv({ proofs: run.proofs })), "Proofs");
   if (n) card.append(n);
   try {
-    const [fa, fb] = await Promise.all([proofsFile(base.commit), prProofsFile(pr.number, run.commit)]);
+    const [fa, fb] = await Promise.all([proofsOf(base), prProofsFile(pr.number, run.commit)]);
     proofsCompare(card, fa, fb, params);
   } catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
 }
