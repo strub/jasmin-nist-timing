@@ -11,8 +11,9 @@ Input (written by jasmin-nist's CI, never edited):
 Output (into OUT_DIR, rebuilt on every deploy):
 
     index.json               light manifest: main commits (oldest first by
-                             commit date) with their run metadata, and the
-                             PRs that have bench records
+                             commit date) with their run metadata, the PRs
+                             that have records, and every PR run with its
+                             run metadata (for the Compare tab)
     series/proofs.json       proof time per commit (total, per top-level
                              directory), column-wise, for the Trends tab
     series/bench-<r>.json    median and quartiles per measurement and commit,
@@ -114,7 +115,7 @@ def main():
 
     # PRs: one manifest each (runs grouped per head commit), and a summary
     # in the index
-    prs = []
+    prs, pr_runs = [], []
     for pdir in sorted((data / "pr").glob("*"), key=lambda p: (len(p.name), p.name)):
         if not pdir.name.isdigit():
             continue
@@ -156,6 +157,7 @@ def main():
                                                 "head_ref": last.get("head_ref"), "runs": ordered_runs})
         prs.append({"number": int(pdir.name), "title": last.get("title"),
                     "head_ref": last.get("head_ref"), "runs": len(ordered_runs), "last": last.get("date")})
+        pr_runs += [{"pr": int(pdir.name), "title": last.get("title"), **r} for r in ordered_runs]
     prs.sort(key=lambda p: p.get("last") or "", reverse=True)
 
     dump(out / "index.json", {
@@ -163,6 +165,7 @@ def main():
         "bench_runners": sorted(runners),
         "commits": ordered,
         "prs": prs,
+        "pr_runs": pr_runs,
     })
     print(f"{out}: {len(ordered)} commits, bench runners {sorted(runners)}, {len(prs)} PRs")
 

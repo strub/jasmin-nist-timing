@@ -6,10 +6,12 @@
 //   #/trends                 timelines             (?scheme=ML-KEM-768)
 //   #/compare/<a>..<b>       b against a           (?zoom=dir/sub)
 //   #/compare/<b>            b against the commit recorded just before it
+//                            (for a PR run, against its merge base on main)
 //   #/prs                    pull requests with recorded benchmarks
 //   #/pr/<number>            a PR run (bench, proofs) against its merge base (?run=<sha>)
 // (#/commit/<sha> is kept as an alias of #/results/<sha>.)
-// Commit ids may be abbreviated.
+// Commit ids may be abbreviated. In compare links, a PR run is written
+// pr<number>:<sha>, or pr<number> for the PR's latest run.
 
 import { el, short, day, dur, minutes, cycles, kcycles, kround, delta, deltaEl } from "./util.js";
 import { lineChart, legend, barsH } from "./chart.js";
@@ -44,6 +46,7 @@ function bySchemeOrder(a, b) {
 }
 
 let INDEX = null, COMMITS = [], POS = new Map();
+let RUNS = [], ENTRIES = [];     // PR runs (each with its `pr`); main commits and PR runs, oldest first
 const cache = new Map();
 const benchHidden = new Map();   // runner -> Set of hidden backends
 // Generated manifests (index.json, series/, pr/) change on every deploy and
@@ -62,6 +65,11 @@ const proofsFile = sha => fetchJSON(`data/proofs/${sha}.json`);
 const benchFile = (runner, sha) => fetchJSON(`data/bench/${runner}/${sha}.json`);
 const prBenchFile = (n, runner, sha) => fetchJSON(`data/pr/${n}/bench/${runner}/${sha}.json`);
 const prProofsFile = (n, sha) => fetchJSON(`data/pr/${n}/proofs/${sha}.json`);
+// a main commit or a PR run: its result files and its id in compare links
+const isRun = c => c.pr != null;
+const benchOf = (c, runner) => isRun(c) ? prBenchFile(c.pr, runner, c.commit) : benchFile(runner, c.commit);
+const proofsOf = c => isRun(c) ? prProofsFile(c.pr, c.commit) : proofsFile(c.commit);
+const ref = c => isRun(c) ? `pr${c.pr}:${c.commit}` : c.commit;
 const proofsSeries = () => fetchJSON("series/proofs.json");
 const benchSeries = runner => fetchJSON(`series/bench-${runner}.json`);
 // a bench result file -> { "scheme|backend|operation": [median, p25, p75] }
@@ -73,9 +81,32 @@ function resolve(id) {
   const hits = COMMITS.filter(c => c.commit.startsWith(id.toLowerCase()));
   return hits.length === 1 ? hits[0] : null;
 }
+// a main commit or a PR run from its id in a compare link (see ref)
+function resolveRef(id) {
+  const m = /^pr(\d+)(?::([0-9a-f]+))?$/i.exec(id || "");
+  if (!m) return resolve(id);
+  const runs = RUNS.filter(r => r.pr === +m[1] && (!m[2] || r.commit.startsWith(m[2].toLowerCase())));
+  return m[2] ? (runs.length === 1 ? runs[0] : null) : runs[runs.length - 1] || null;
+}
+// the previous and next entries of the same series: main, or the same PR's runs
+function stepsOf(c) {
+  if (!isRun(c)) return { prev: prevOf(c), next: nextOf(c) };
+  const runs = RUNS.filter(r => r.pr === c.pr), i = runs.indexOf(c);
+  return { prev: runs[i - 1] || null, next: runs[i + 1] || null };
+}
+// A for a PR run, for one kind of result: the merge base's main record, else
+// the closest earlier main commit that has one (approx)
+function baseOf(run, has) {
+  const exact = COMMITS.find(c => c.commit === run.merge_base && has(c));
+  if (exact || !run.merge_base_date) return { base: exact, approx: false };
+  const earlier = COMMITS.filter(c => has(c) && (c.commit_date || "") <= run.merge_base_date);
+  return { base: earlier[earlier.length - 1], approx: earlier.length > 0 };
+}
 const prevOf = (c, has) => { for (let i = POS.get(c.commit) - 1; i >= 0; i--) if (!has || has(COMMITS[i])) return COMMITS[i]; return null; };
 const nextOf = (c, has) => { for (let i = POS.get(c.commit) + 1; i < COMMITS.length; i++) if (!has || has(COMMITS[i])) return COMMITS[i]; return null; };
-const label = c => `${short(c.commit)} · ${day(c.commit_date)} · ${c.subject || ""}`;
+const when = c => isRun(c) ? c.date : c.commit_date;
+const tag = c => isRun(c) ? `#${c.pr} ${short(c.commit)}` : short(c.commit);
+const label = c => `${tag(c)} · ${day(when(c))} · ${c.subject || ""}`;
 const xTitle = x => COMMITS[x] ? label(COMMITS[x]) : "";
 
 // environment fingerprints: a change draws a marker and a compare notice
@@ -120,15 +151,16 @@ function nav(active) {
     a.classList.toggle("on", a.dataset.v === active);
 }
 
-// Commit picker: shows the current commit; opens a search over every
-// recorded commit (hash prefix, subject words, date; all terms must match),
-// newest first, a bounded list so the history can grow without limit.
-function commitPicker(cur, onPick, aria) {
+// Commit picker: shows the current commit; opens a search over `items`
+// (hash prefix, subject words, date, #PR; all terms must match), newest
+// first, a bounded list so the history can grow without limit.
+function commitPicker(cur, onPick, aria, items = COMMITS) {
   const box = el("div", { class: "cpick" });
   const btn = el("button", { class: "cur", "aria-haspopup": "listbox", "aria-label": aria,
                              "aria-expanded": "false", text: label(cur) });
   const panel = el("div", { class: "panel", hidden: "" });
-  const q = el("input", { type: "search", placeholder: "Search hash, subject or date (e.g. ntt 2026-10)",
+  const q = el("input", { type: "search", placeholder: items === COMMITS ? "Search hash, subject or date (e.g. ntt 2026-10)"
+                                                     : "Search hash, subject, date or #PR (e.g. #51, ntt 2026-10)",
                           "aria-label": `${aria}: search`, autocomplete: "off", spellcheck: "false" });
   const list = el("div", { class: "list", role: "listbox" });
   const more = el("div", { class: "more" });
@@ -136,16 +168,16 @@ function commitPicker(cur, onPick, aria) {
   box.append(btn, panel);
   const SHOW = 30, RECENT = 20;
   let hits = [], active = 0;
-  const hay = c => `${c.commit} ${day(c.commit_date)} ${c.subject || ""}`.toLowerCase();
+  const hay = c => `${c.commit} ${day(when(c))} ${c.subject || ""}${isRun(c) ? ` #${c.pr} ${c.title || ""}` : ""}`.toLowerCase();
   const refresh = () => {
     const terms = q.value.toLowerCase().split(/\s+/).filter(Boolean);
-    const all = COMMITS.slice().reverse().filter(c => terms.every(t => hay(c).includes(t)));
+    const all = items.slice().reverse().filter(c => terms.every(t => hay(c).includes(t)));
     hits = all.slice(0, terms.length ? SHOW : RECENT);
     active = Math.max(0, hits.indexOf(cur));
     list.replaceChildren(...hits.map((c, i) => {
       const it = el("div", { class: "it" + (i === active ? " on" : "") + (c === cur ? " sel" : ""),
                              role: "option", "aria-selected": String(c === cur) },
-        el("span", { class: "mono", text: short(c.commit) }), el("span", { class: "muted", text: day(c.commit_date) }),
+        el("span", { class: "mono", text: tag(c) }), el("span", { class: "muted", text: day(when(c)) }),
         el("span", { class: "subj", text: c.subject || "" }));
       it.addEventListener("pointerdown", ev => { ev.preventDefault(); pick(c); });
       return it;
@@ -585,8 +617,8 @@ async function compareView(a, b, params) {
       `bench: quartiles overlap or under ${NOISE.bench * 100}%).` }));
   const picker = (lab, cur, other, setTo) => {
     const row = el("div", { class: "pick" });
-    const sel = commitPicker(cur, setTo, `commit ${lab}`);
-    const p = prevOf(cur), n = nextOf(cur);
+    const sel = commitPicker(cur, setTo, `commit ${lab}`, ENTRIES);
+    const { prev: p, next: n } = stepsOf(cur);
     const bp = el("button", { text: "◀", title: "older", "aria-label": `${lab}: older commit` }); bp.disabled = !p;
     bp.addEventListener("click", () => setTo(p));
     const bn = el("button", { text: "▶", title: "newer", "aria-label": `${lab}: newer commit` }); bn.disabled = !n;
@@ -594,10 +626,10 @@ async function compareView(a, b, params) {
     row.append(el("span", { class: "lab", text: lab }), sel, bp, bn);
     return row;
   };
-  const route = (x, y) => go(`#/compare/${x.commit}..${y.commit}`);
+  const route = (x, y) => go(`#/compare/${ref(x)}..${ref(y)}`);
   head.append(picker("A", a, b, c => route(c, b)), el("div", { style: "height:6px" }), picker("B", b, a, c => route(a, c)));
   const steps = el("div", { class: "row", style: "margin-top:8px" });
-  const pa = prevOf(a), pb = prevOf(b), na = nextOf(a), nb = nextOf(b);
+  const { prev: pa, next: na } = stepsOf(a), { prev: pb, next: nb } = stepsOf(b);
   const s1 = el("button", { text: "◀ step both older" }); s1.disabled = !(pa && pb);
   s1.addEventListener("click", () => route(pa, pb));
   const s2 = el("button", { text: "step both newer ▶" }); s2.disabled = !(na && nb);
@@ -618,7 +650,7 @@ async function compareView(a, b, params) {
     const n = envNotice(envDiff(benchEnv(a, runner), benchEnv(b, runner)), "Bench");
     if (n) card.append(n);
     try {
-      const [ma, mb] = await Promise.all([benchFile(runner, a.commit), benchFile(runner, b.commit)]).then(ds => ds.map(toM));
+      const [ma, mb] = await Promise.all([benchOf(a, runner), benchOf(b, runner)]).then(ds => ds.map(toM));
       card.append(benchCompare(ma, mb));
     } catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
   }
@@ -632,7 +664,7 @@ async function compareView(a, b, params) {
     const n = envNotice(envDiff(proofsEnv(a), proofsEnv(b)), "Proofs");
     if (n) card.append(n);
     let fa = null, fb = null;
-    try { [fa, fb] = await Promise.all([proofsFile(a.commit), proofsFile(b.commit)]); }
+    try { [fa, fb] = await Promise.all([proofsOf(a), proofsOf(b)]); }
     catch (e) { card.append(el("div", { class: "empty", text: String(e) })); }
     if (fa && fb) {
       proofsCompare(card, fa, fb, params);
@@ -673,7 +705,8 @@ async function prView(number, params) {
   head.append(el("h2", { text: `PR #${pr.number}${pr.title ? " · " + pr.title : ""}` }),
     el("p", { class: "sub" }, el("span", { class: "mono", text: pr.head_ref || "" }), " · ",
        el("a", { href: `${REPO}/pull/${pr.number}`, text: "pull request" }), " · ",
-       el("a", { href: `#/prs`, text: "all PRs" })));
+       el("a", { href: `#/prs`, text: "all PRs" }), " · ",
+       el("a", { href: `#/compare/${ref(run)}`, text: "compare with another commit or PR run" })));
   if (runs.length > 1) {
     const sel = el("select", { "aria-label": "PR run" });
     for (const r of runs.slice().reverse()) {
@@ -685,14 +718,7 @@ async function prView(number, params) {
     head.append(el("div", { class: "row" }, el("span", { class: "muted", text: `Run (${runs.length}):` }), sel));
   }
 
-  // A per kind of result: the merge base's main record, else the closest
-  // earlier main commit that has one (flagged)
-  const baseFor = has => {
-    const exact = COMMITS.find(c => c.commit === run.merge_base && has(c));
-    if (exact || !run.merge_base_date) return { base: exact, approx: false };
-    const earlier = COMMITS.filter(c => has(c) && (c.commit_date || "") <= run.merge_base_date);
-    return { base: earlier[earlier.length - 1], approx: earlier.length > 0 };
-  };
+  const baseFor = has => baseOf(run, has);
   const sides = (base, runId) => el("p", { class: "sub" },
     "A = ", base ? el("a", { href: `#/results/${base.commit}`, class: "mono", text: short(base.commit) }) : "—",
     " (main) · B = ", el("span", { class: "mono", text: short(run.commit) }), ` (PR run, ${day(run.date)})`,
@@ -758,8 +784,11 @@ function route() {
   } else if (v === "compare") {
     if (!COMMITS.length) return emptyView("compare");
     let a, b;
-    if (arg && arg.includes("..")) { const [x, y] = arg.split(".."); a = resolve(x); b = resolve(y); }
-    else { b = resolve(arg) || COMMITS[COMMITS.length - 1]; a = prevOf(b) || b; }
+    if (arg && arg.includes("..")) { const [x, y] = arg.split(".."); a = resolveRef(x); b = resolveRef(y); }
+    else {
+      b = arg ? resolveRef(arg) : COMMITS[COMMITS.length - 1];
+      a = b && ((isRun(b) ? baseOf(b, () => true).base : prevOf(b)) || b);
+    }
     if (a && b) return compareView(a, b, params);
   }
   view.replaceChildren(el("div", { class: "card empty", text: `Unknown or ambiguous link: #/${parts.join("/")}` }));
@@ -769,6 +798,8 @@ fetchJSON("index.json").then(ix => {
   INDEX = ix;
   COMMITS = ix.commits;
   COMMITS.forEach((c, i) => POS.set(c.commit, i));
+  RUNS = ix.pr_runs || [];
+  ENTRIES = [...COMMITS, ...RUNS].sort((x, y) => (when(x) || "").localeCompare(when(y) || ""));
   const nprs = (ix.prs || []).length;
   const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
   document.getElementById("gen").textContent = `${plural(COMMITS.length, "commit")}${nprs ? ` · ${plural(nprs, "PR")}` : ""} · ` +
