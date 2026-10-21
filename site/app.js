@@ -81,10 +81,15 @@ function resolve(id) {
   const hits = COMMITS.filter(c => c.commit.startsWith(id.toLowerCase()));
   return hits.length === 1 ? hits[0] : null;
 }
-// a main commit or a PR run from its id in a compare link (see ref)
+// a main commit or a PR run from its id in a compare link (see ref); a bare
+// hash that is not on main may name a single PR run
 function resolveRef(id) {
   const m = /^pr(\d+)(?::([0-9a-f]+))?$/i.exec(id || "");
-  if (!m) return resolve(id);
+  if (!m) {
+    if (!id || resolve(id) || COMMITS.some(c => c.commit.startsWith(id.toLowerCase()))) return resolve(id);
+    const runs = RUNS.filter(r => r.commit.startsWith(id.toLowerCase()));
+    return runs.length === 1 ? runs[0] : null;
+  }
   const runs = RUNS.filter(r => r.pr === +m[1] && (!m[2] || r.commit.startsWith(m[2].toLowerCase())));
   return m[2] ? (runs.length === 1 ? runs[0] : null) : runs[runs.length - 1] || null;
 }
@@ -99,7 +104,8 @@ function stepsOf(c) {
 function baseOf(run, has) {
   const exact = COMMITS.find(c => c.commit === run.merge_base && has(c));
   if (exact || !run.merge_base_date) return { base: exact, approx: false };
-  const earlier = COMMITS.filter(c => has(c) && (c.commit_date || "") <= run.merge_base_date);
+  const t = Date.parse(run.merge_base_date);   // dates come with different offsets
+  const earlier = COMMITS.filter(c => has(c) && Date.parse(c.commit_date || "") <= t);
   return { base: earlier[earlier.length - 1], approx: earlier.length > 0 };
 }
 const prevOf = (c, has) => { for (let i = POS.get(c.commit) - 1; i >= 0; i--) if (!has || has(COMMITS[i])) return COMMITS[i]; return null; };
@@ -706,7 +712,7 @@ async function prView(number, params) {
     el("p", { class: "sub" }, el("span", { class: "mono", text: pr.head_ref || "" }), " · ",
        el("a", { href: `${REPO}/pull/${pr.number}`, text: "pull request" }), " · ",
        el("a", { href: `#/prs`, text: "all PRs" }), " · ",
-       el("a", { href: `#/compare/${ref(run)}`, text: "compare with another commit or PR run" })));
+       el("a", { href: `#/compare/${ref({ ...run, pr: pr.number })}`, text: "compare with another commit or PR run" })));
   if (runs.length > 1) {
     const sel = el("select", { "aria-label": "PR run" });
     for (const r of runs.slice().reverse()) {
