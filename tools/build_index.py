@@ -12,8 +12,9 @@ Output (into OUT_DIR, rebuilt on every deploy):
 
     index.json               light manifest: main commits (oldest first by
                              commit date) with their run metadata, the PRs
-                             that have records, and every PR run with its
-                             run metadata (for the Compare tab)
+                             that have records (highest number first),
+                             and every PR run with its run metadata (for
+                             the Compare tab)
     series/proofs.json       proof time per commit (total, per top-level
                              directory), column-wise, for the Trends tab
     series/bench-<r>.json    median and quartiles per measurement and commit,
@@ -158,7 +159,7 @@ def main():
         prs.append({"number": int(pdir.name), "title": last.get("title"),
                     "head_ref": last.get("head_ref"), "runs": len(ordered_runs), "last": last.get("date")})
         pr_runs += [{"pr": int(pdir.name), "title": last.get("title"), **r} for r in ordered_runs]
-    prs.sort(key=lambda p: p.get("last") or "", reverse=True)
+    prs.sort(key=lambda p: p["number"], reverse=True)
 
     dump(out / "index.json", {
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
