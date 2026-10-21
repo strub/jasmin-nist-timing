@@ -47,6 +47,14 @@ def dump(path, obj):
     path.write_text(json.dumps(obj, separators=(",", ":")) + "\n")
 
 
+def instant(date):
+    """An ISO date as a sortable instant: dates come with various offsets."""
+    try:
+        return datetime.fromisoformat(date.replace("Z", "+00:00")).timestamp()
+    except (AttributeError, ValueError):
+        return 0.0
+
+
 def bench_m(d):
     """'scheme|backend|operation' -> [median, p25, p75]"""
     return {f'{r["scheme"]}|{r["backend"]}|{r["operation"]}':
@@ -62,7 +70,7 @@ def main():
 
     def entry(sha, meta):
         c = commits.setdefault(sha, {"commit": sha})
-        for k in ("commit_date", "subject"):
+        for k in ("commit_date", "subject", "parent"):
             if meta.get(k) and not c.get(k):
                 c[k] = meta[k]
         return c
@@ -74,7 +82,8 @@ def main():
         meta = d.get("meta", {})
         c = entry(f.stem, meta)
         c["proofs"] = {k: meta[k] for k in
-                       ("total_seconds", "files", "machine", "tools", "date", "run_id")
+                       ("total_seconds", "files", "machine", "tools", "date", "run_id",
+                        "from_pr")
                        if k in meta}
         groups = {}
         for x in d.get("files", []):
@@ -91,11 +100,24 @@ def main():
         runners.add(runner)
         c = entry(f.stem, meta)
         c.setdefault("bench", {})[runner] = {
-            k: meta[k] for k in ("reps", "iters", "env", "date", "run_id") if k in meta}
+            k: meta[k] for k in ("reps", "iters", "env", "date", "run_id", "from_pr")
+            if k in meta}
         bench_series.setdefault(runner, {})[f.stem] = bench_m(d)
 
+    # by commit date; a merged stack's commits share theirs, and those copied
+    # from PR runs record their parent: within a date, parents first, and a
+    # record without a parent (a push's head, measured on main) last
+    def depth(c, seen=()):
+        p = commits.get(c.get("parent"))
+        if c.get("parent") is None:
+            return len(commits)
+        if p is None or p["commit"] in seen:
+            return 0
+        if instant(p.get("commit_date")) != instant(c.get("commit_date")):
+            return 0
+        return 1 + depth(p, seen + (c["commit"],))
     ordered = sorted(commits.values(),
-                     key=lambda c: (c.get("commit_date") or "", c["commit"]))
+                     key=lambda c: (instant(c.get("commit_date")), depth(c), c["commit"]))
     shas = [c["commit"] for c in ordered]
 
     # series, column-wise over `commits` (null where a commit has no value)
@@ -152,7 +174,7 @@ def main():
                 if k in meta}
         if not runs:
             continue
-        ordered_runs = sorted(runs.values(), key=lambda r: (r.get("date") or "", r["commit"]))
+        ordered_runs = sorted(runs.values(), key=lambda r: (instant(r.get("date")), r["commit"]))
         last = ordered_runs[-1]
         dump(out / "pr" / f"{pdir.name}.json", {"number": int(pdir.name), "title": last.get("title"),
                                                 "head_ref": last.get("head_ref"), "runs": ordered_runs})

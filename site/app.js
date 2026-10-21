@@ -118,6 +118,8 @@ const label = c => `${tag(c)} · ${day(when(c))} · ${c.subject || ""}`;
 // the kinds of results an entry has, for the pickers
 const kinds = c => [Object.keys(c.bench || {}).length ? "bench" : null, c.proofs ? "proofs" : null]
   .filter(Boolean).join(" + ");
+// a main record copied from the run of the merged PR (same tree)
+const fromPr = r => r?.from_pr ? ` (PR #${r.from_pr.number} run, ${short(r.from_pr.commit)})` : "";
 const xTitle = x => COMMITS[x] ? label(COMMITS[x]) : "";
 
 // environment fingerprints: a change draws a marker and a compare notice
@@ -390,7 +392,7 @@ async function commitView(c, params) {
   head.append(el("h2", { text: c.subject || short(c.commit) }),
     el("p", { class: "sub" }, el("span", { class: "mono", text: c.commit }), ` · ${day(c.commit_date)} · `,
        el("a", { href: `${REPO}/commit/${c.commit}`, text: "commit" }),
-       c.proofs?.run_id ? " · " : null, c.proofs?.run_id ? el("a", { href: `${REPO}/actions/runs/${c.proofs.run_id}`, text: "proofs run" }) : null));
+       c.proofs?.run_id ? " · " : null, c.proofs?.run_id ? el("a", { href: `${REPO}/actions/runs/${c.proofs.run_id}`, text: "proofs run" + fromPr(c.proofs) }) : null));
   const bar = el("div", { class: "row" });
   const cp = commitPicker(c, x => go(`#/results/${x.commit}`), "commit");
   cp.style.flex = "1 1 320px";
@@ -411,7 +413,7 @@ async function commitView(c, params) {
     const card = el("div", { class: "card" });
     view.append(card);
     card.append(el("h2", { text: `Benchmarks · ${runner}` }),
-      el("p", { class: "sub", text: `Median cycles, ${b.reps || 1} passes × ${b.iters || "?"} iterations; ± half the passes' interquartile range. ` +
+      el("p", { class: "sub", text: `Median cycles, ${b.reps || 1} passes × ${b.iters || "?"} iterations${fromPr(b)}; ± half the passes' interquartile range. ` +
         Object.entries(b.env || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") }));
     const host = el("div");
     card.append(host);
